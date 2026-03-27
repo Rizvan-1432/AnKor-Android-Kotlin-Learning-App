@@ -10,24 +10,17 @@ import {
   Switch,
   FormControlLabel,
   TextField,
-  Button,
-  Alert,
   Snackbar,
   Chip,
   Grid,
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  InputLabel
 } from '@mui/material'
 import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store'
-import { Question, QuestionLevel, QuestionCategory } from '../types'
+import { QuestionLevel } from '../types'
 
 const CATEGORY_OPTIONS: { value: QuestionCategory; label: string }[] = [
   { value: 'kotlin', label: 'Kotlin' },
@@ -51,10 +44,7 @@ const CATEGORY_OPTIONS: { value: QuestionCategory; label: string }[] = [
 const DARK_ONLY_GRADIENTS = ['black', 'dark-blue', 'dark-gray']
 
 const SettingsPage: React.FC = () => {
-  const navigate = useNavigate()
-  const { settings, updateSettings, addQuestion, questions, exportData, importData, resetAllData } = useAppStore()
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [showResetDialog, setShowResetDialog] = useState(false)
+  const { settings, updateSettings, questions } = useAppStore()
   const [snackbar, setSnackbar] = useState({ open: false, message: '' })
 
   // Если сохранён тёмный градиент, но тема светлая — сбросить на blue
@@ -63,50 +53,6 @@ const SettingsPage: React.FC = () => {
       updateSettings({ backgroundGradient: 'blue' })
     }
   }, [settings.theme, settings.backgroundGradient]) // eslint-disable-line react-hooks/exhaustive-deps
-  
-  // Форма добавления вопроса
-  const [newQuestion, setNewQuestion] = useState({
-    question: '',
-    answer: '',
-    detailedAnswer: '',
-    codeExample: '',
-    level: 'junior' as QuestionLevel,
-    category: 'android-sdk' as QuestionCategory
-  })
-
-  const handleExport = () => {
-    const json = exportData()
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ankor-backup-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    setSnackbar({ open: true, message: 'Данные экспортированы!' })
-  }
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      try {
-        importData(ev.target?.result as string)
-        setSnackbar({ open: true, message: 'Данные успешно импортированы!' })
-      } catch {
-        setSnackbar({ open: true, message: 'Ошибка: неверный формат файла' })
-      }
-    }
-    reader.readAsText(file)
-    e.target.value = ''
-  }
-
-  const handleResetAll = () => {
-    resetAllData()
-    setShowResetDialog(false)
-    setSnackbar({ open: true, message: 'Все данные сброшены' })
-  }
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'auto') => {
     updateSettings({
@@ -137,39 +83,6 @@ const SettingsPage: React.FC = () => {
     })
   }
 
-  const handleAddQuestion = () => {
-    if (!newQuestion.question.trim() || !newQuestion.answer.trim()) {
-      setSnackbar({ open: true, message: 'Заполните обязательные поля' })
-      return
-    }
-
-    const question: Question = {
-      id: Date.now().toString(),
-      question: newQuestion.question.trim(),
-      answer: newQuestion.answer.trim(),
-      detailedAnswer: newQuestion.detailedAnswer.trim() || undefined,
-      codeExample: newQuestion.codeExample.trim() || undefined,
-      level: newQuestion.level,
-      category: newQuestion.category,
-      studied: false,
-      correct: 0,
-      incorrect: 0,
-      answered: false,
-      createdAt: new Date().toISOString()
-    }
-
-    addQuestion(question)
-    setSnackbar({ open: true, message: 'Вопрос успешно добавлен!' })
-    setNewQuestion({
-      question: '',
-      answer: '',
-      detailedAnswer: '',
-      codeExample: '',
-      level: 'junior' as QuestionLevel,
-      category: 'android-sdk' as QuestionCategory
-    })
-    setShowAddForm(false)
-  }
 
   const getLevelStats = () => {
     const stats: Record<QuestionLevel, number> = {
@@ -322,216 +235,9 @@ const SettingsPage: React.FC = () => {
           </motion.div>
         </Grid>
 
-        {/* Управление вопросами */}
-        <Grid item xs={12}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-          >
-            <Card sx={{ borderRadius: 3, boxShadow: 3, mb: 3 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">
-                    ✏️ Управление вопросами
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    onClick={() => navigate('/manage-questions')}
-                    sx={{ minWidth: 200 }}
-                  >
-                    Управлять вопросами
-                  </Button>
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  Просматривайте, редактируйте и удаляйте существующие вопросы
-                </Typography>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </Grid>
-
-        {/* Добавление вопроса */}
-        <Grid item xs={12}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-          >
-            <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                  <Typography variant="h6">
-                    ➕ Добавить вопрос
-                  </Typography>
-                  <Button
-                    variant={showAddForm ? "outlined" : "contained"}
-                    onClick={() => setShowAddForm(!showAddForm)}
-                  >
-                    {showAddForm ? 'Скрыть форму' : 'Показать форму'}
-                  </Button>
-                </Box>
-
-                {showAddForm && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Вопрос *"
-                          value={newQuestion.question}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, question: e.target.value })}
-                          fullWidth
-                          multiline
-                          rows={2}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Краткий ответ *"
-                          value={newQuestion.answer}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, answer: e.target.value })}
-                          fullWidth
-                          multiline
-                          rows={2}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Расширенный ответ"
-                          value={newQuestion.detailedAnswer}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, detailedAnswer: e.target.value })}
-                          fullWidth
-                          multiline
-                          rows={3}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Код с комментариями"
-                          value={newQuestion.codeExample}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, codeExample: e.target.value })}
-                          fullWidth
-                          multiline
-                          rows={4}
-                          placeholder="class Example { ... }"
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          select
-                          id="add-question-level"
-                          label="Уровень"
-                          value={newQuestion.level}
-                          onChange={(e) => setNewQuestion({ ...newQuestion, level: e.target.value as QuestionLevel })}
-                          fullWidth
-                          SelectProps={{ native: true, inputProps: { id: 'add-question-level', name: 'level' } }}
-                        >
-                          <option value="junior">Junior</option>
-                          <option value="middle">Middle</option>
-                          <option value="senior">Senior</option>
-                          <option value="lead">Lead</option>
-                          <option value="architect">Architect</option>
-                          <option value="expert">Expert</option>
-                        </TextField>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <FormControl fullWidth>
-                          <InputLabel>Категория</InputLabel>
-                          <Select
-                            value={newQuestion.category}
-                            onChange={(e) => setNewQuestion({ ...newQuestion, category: e.target.value as QuestionCategory })}
-                            label="Категория"
-                          >
-                            {CATEGORY_OPTIONS.map(opt => (
-                              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                          <Button
-                            variant="outlined"
-                            onClick={() => setShowAddForm(false)}
-                          >
-                            Отмена
-                          </Button>
-                          <Button
-                            variant="contained"
-                            onClick={handleAddQuestion}
-                          >
-                            Добавить вопрос
-                          </Button>
-                        </Box>
-                      </Grid>
-                    </Grid>
-                  </motion.div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        </Grid>
       </Grid>
 
       {/* Экспорт / Импорт / Сброс */}
-      <Grid container spacing={3} sx={{ mt: 1 }}>
-        <Grid item xs={12}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.6 }}
-          >
-            <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  💾 Данные приложения
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Экспортируйте данные для резервной копии или перенесите их на другое устройство
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <Button variant="contained" color="primary" onClick={handleExport}>
-                    ⬇️ Экспортировать
-                  </Button>
-                  <Button variant="outlined" color="primary" component="label" htmlFor="import-file-input">
-                    ⬆️ Импортировать
-                    <input
-                      id="import-file-input"
-                      name="import-file"
-                      type="file"
-                      accept=".json"
-                      hidden
-                      onChange={handleImport}
-                    />
-                  </Button>
-                  <Button variant="outlined" color="error" onClick={() => setShowResetDialog(true)}>
-                    🗑️ Сбросить все данные
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </Grid>
-      </Grid>
-
-      {/* Диалог подтверждения полного сброса */}
-      <Dialog open={showResetDialog} onClose={() => setShowResetDialog(false)}>
-        <DialogTitle>Сбросить все данные?</DialogTitle>
-        <DialogContent>
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Это действие удалит все вопросы, статистику, цели и настройки. Отменить нельзя.
-          </Alert>
-          <Typography>Рекомендуем сначала сделать экспорт данных.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowResetDialog(false)}>Отмена</Button>
-          <Button onClick={handleResetAll} color="error" variant="contained">Сбросить всё</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Snackbar для уведомлений */}
       <Snackbar

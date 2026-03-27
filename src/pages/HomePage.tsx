@@ -17,11 +17,10 @@ const HomePage: React.FC = () => {
   const theme = useTheme()
   const { questions, loadQuestions } = useAppStore()
 
-  // Загружаем вопросы только если локальный store пуст
+  // Загружаем вопросы при каждом монтировании — store делает merge,
+  // прогресс существующих вопросов сохраняется, новые добавляются
   useEffect(() => {
-    if (questions.length === 0) {
-      loadQuestions()
-    }
+    loadQuestions()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = new Date().toDateString()

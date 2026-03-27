@@ -94,18 +94,20 @@ const SyncStatus: React.FC = () => {
 
         {/* Кнопка синхронизации */}
         <Tooltip title="Синхронизировать с сервером">
-          <IconButton
-            onClick={handleSync}
-            disabled={loading || !isOnline}
-            size="small"
-            color="primary"
-          >
-            {loading ? (
-              <CircularProgress size={20} />
-            ) : (
-              <SyncIcon />
-            )}
-          </IconButton>
+          <span>
+            <IconButton
+              onClick={handleSync}
+              disabled={loading || !isOnline}
+              size="small"
+              color="primary"
+            >
+              {loading ? (
+                <CircularProgress size={20} />
+              ) : (
+                <SyncIcon />
+              )}
+            </IconButton>
+          </span>
         </Tooltip>
 
         {/* Время последней синхронизации */}
