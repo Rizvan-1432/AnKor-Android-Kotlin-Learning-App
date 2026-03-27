@@ -1,6 +1,6 @@
 import { Question, QuestionLevel, QuestionCategory } from '../types'
 
-const BASE_URL = '/api'
+const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://ankor-android-kotlin-learning-app.onrender.com/api'
 
 const getToken = () => localStorage.getItem('admin_token')
 

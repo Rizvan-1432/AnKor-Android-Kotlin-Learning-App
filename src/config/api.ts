@@ -1,7 +1,13 @@
 // API Configuration
 export const API_CONFIG = {
-  // Базовый URL API (замените на ваш сервер AEZA)
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  // Базовый URL API:
+  // 1) VITE_API_URL (если задан в окружении)
+  // 2) Локальная разработка (DEV)
+  // 3) Продакшен сервер Render
+  BASE_URL: import.meta.env.VITE_API_URL
+    || (import.meta.env.DEV
+      ? 'http://localhost:3000/api'
+      : 'https://ankor-android-kotlin-learning-app.onrender.com/api'),
   
   // Таймауты
   TIMEOUT: 10000, // 10 секунд
