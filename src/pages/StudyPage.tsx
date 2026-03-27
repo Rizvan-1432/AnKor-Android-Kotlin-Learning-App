@@ -1,0 +1,378 @@
+import React, { useState, useEffect } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import {
+  Container, Typography, Box, Card, CardContent, Button,
+  Chip, Pagination, Alert, CircularProgress,
+  Dialog, DialogContent, DialogActions, IconButton,
+  Accordion, AccordionSummary, AccordionDetails, Paper, Divider
+} from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useAppStore } from '../store'
+import { Question, QuestionLevel } from '../types'
+
+const CATEGORY_LABELS: Record<string, string> = {
+  'kotlin':                'Kotlin',
+  'android-sdk':           'Android SDK',
+  'ui-ux':                 'UI/UX',
+  'architecture':          'Архитектура',
+  'jetpack':               'Jetpack',
+  'dependency-injection':  'DI',
+  'networking':            'Сеть',
+  'databases':             'Базы данных',
+  'performance':           'Производительность',
+  'multithreading':        'Многопоточность',
+  'security':              'Безопасность',
+  'testing':               'Тестирование',
+  'ci-cd':                 'CI/CD',
+  'system':                'Системные',
+  'behavioral':            'Поведенческие',
+  'publishing':            'Публикация',
+}
+
+const LEVEL_COLORS: Record<QuestionLevel, string> = {
+  junior:    '#10b981',
+  middle:    '#3b82f6',
+  senior:    '#8b5cf6',
+  lead:      '#f59e0b',
+  architect: '#ef4444',
+  expert:    '#6366f1',
+}
+const LEVEL_NAMES: Record<QuestionLevel, string> = {
+  junior: 'Junior', middle: 'Middle', senior: 'Senior',
+  lead: 'Lead', architect: 'Architect', expert: 'Expert',
+}
+
+const StudyPage: React.FC = () => {
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { questions, markCorrect, markIncorrect } = useAppStore()
+
+  const level = searchParams.get('level') as QuestionLevel
+  const categoriesParam = searchParams.get('categories')
+  const trackName = searchParams.get('trackName')
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const [levelQuestions, setLevelQuestions] = useState<Question[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Модальное окно ответа
+  const [modalQuestion, setModalQuestion] = useState<Question | null>(null)
+
+  const questionsPerPage = 5
+
+  useEffect(() => {
+    if (level) {
+      setLevelQuestions(questions.filter(q => q.level === level))
+      setLoading(false)
+    } else if (categoriesParam) {
+      const cats = categoriesParam.split(',')
+      setLevelQuestions(questions.filter(q => cats.includes(q.category)))
+      setLoading(false)
+    } else {
+      navigate('/questions')
+    }
+  }, [level, categoriesParam, questions, navigate])
+
+  // Синхронизируем modalQuestion с актуальными данными из store
+  useEffect(() => {
+    if (modalQuestion) {
+      const updated = questions.find(q => q.id === modalQuestion.id)
+      if (updated) setModalQuestion(updated)
+    }
+  }, [questions])
+
+  const totalPages = Math.ceil(levelQuestions.length / questionsPerPage)
+  const startIndex = (currentPage - 1) * questionsPerPage
+  const currentQuestions = levelQuestions.slice(startIndex, startIndex + questionsPerPage)
+
+  const accentColor = level ? (LEVEL_COLORS[level] ?? '#3b82f6') : '#3b82f6'
+
+  const handleAnswer = (questionId: string, isCorrect: boolean) => {
+    if (isCorrect) markCorrect(questionId)
+    else markIncorrect(questionId)
+  }
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>Загрузка вопросов...</Typography>
+      </Container>
+    )
+  }
+
+  if ((!level && !categoriesParam) || levelQuestions.length === 0) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          {trackName
+            ? `Вопросы по теме «${trackName}» не найдены`
+            : `Вопросы для уровня ${LEVEL_NAMES[level] ?? level} не найдены`}
+        </Alert>
+        <Button variant="contained" onClick={() => navigate('/questions')}>
+          Вернуться к выбору уровня
+        </Button>
+      </Container>
+    )
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      {/* Заголовок */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography component="h1" fontWeight="bold" noWrap
+            sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' }, lineHeight: 1.3 }}>
+            {trackName ? `📚 ${trackName}` : `Изучение — ${LEVEL_NAMES[level] ?? level}`}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.85rem' } }}>
+            {levelQuestions.length} вопросов • стр. {currentPage}/{totalPages}
+          </Typography>
+        </Box>
+      </motion.div>
+
+      {/* Список вопросов */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
+        {currentQuestions.map((question, index) => (
+          <motion.div key={question.id}
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.08, duration: 0.4 }}>
+            <Card sx={{ mb: 2.5, borderRadius: 3, boxShadow: 2, border: `1px solid ${accentColor}22` }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                {/* Метки */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                  <Chip label={`# ${startIndex + index + 1}`} size="small"
+                    sx={{ bgcolor: accentColor, color: 'white', fontWeight: 'bold', height: 22, fontSize: '0.7rem' }} />
+                  <Chip label={CATEGORY_LABELS[question.category] ?? question.category} size="small" variant="outlined"
+                    sx={{ borderColor: accentColor, color: accentColor, height: 22, fontSize: '0.7rem' }} />
+                </Box>
+
+                {/* Текст вопроса */}
+                <Typography variant="body1" fontWeight="medium" sx={{ mb: 2.5, lineHeight: 1.5 }}>
+                  {question.question}
+                </Typography>
+
+                {/* Кнопки */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button variant="contained" color="success" size="small"
+                    onClick={() => handleAnswer(question.id, true)}
+                    disabled={question.answered}
+                    sx={{ flex: 1, minWidth: 100, fontSize: { xs: '0.72rem', sm: '0.875rem' } }}>
+                    ✅ Знаю
+                  </Button>
+                  <Button variant="contained" color="error" size="small"
+                    onClick={() => handleAnswer(question.id, false)}
+                    disabled={question.answered}
+                    sx={{ flex: 1, minWidth: 100, fontSize: { xs: '0.72rem', sm: '0.875rem' } }}>
+                    ❌ Не знаю
+                  </Button>
+                  <Button variant="outlined" size="small"
+                    onClick={() => setModalQuestion(question)}
+                    sx={{ flex: 1, minWidth: 100, borderColor: accentColor, color: accentColor, fontSize: { xs: '0.72rem', sm: '0.875rem' } }}>
+                    📖 Ответ
+                  </Button>
+                </Box>
+
+                {/* Статистика */}
+                {question.studied && (
+                  <Box sx={{ mt: 1.5, display: 'flex', gap: 2 }}>
+                    <Typography variant="caption" color="text.secondary">✅ {question.correct}</Typography>
+                    <Typography variant="caption" color="text.secondary">❌ {question.incorrect}</Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Пагинация */}
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination count={totalPages} page={currentPage}
+            onChange={(_, p) => setCurrentPage(p)} color="primary" size="medium" />
+        </Box>
+      )}
+
+      {/* ───── МОДАЛЬНОЕ ОКНО ОТВЕТА ───── */}
+      <AnimatePresence>
+        {modalQuestion && (
+          <Dialog
+            open={!!modalQuestion}
+            onClose={() => setModalQuestion(null)}
+            maxWidth="sm"
+            fullWidth
+            fullScreen={false}
+            PaperProps={{
+              sx: {
+                borderRadius: 3,
+                mx: { xs: 1.5, sm: 3 },
+                maxHeight: '90vh',
+              }
+            }}
+          >
+            {/* Цветная шапка */}
+            <Box sx={{
+              background: `linear-gradient(135deg, ${accentColor}dd 0%, ${accentColor}99 100%)`,
+              p: { xs: 2, sm: 2.5 },
+              color: 'white',
+              position: 'relative',
+            }}>
+              <IconButton
+                onClick={() => setModalQuestion(null)}
+                size="small"
+                sx={{ position: 'absolute', top: 8, right: 8, color: 'white', bgcolor: 'rgba(255,255,255,0.15)' }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+
+              <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                {level && (
+                  <Chip label={LEVEL_NAMES[level]} size="small"
+                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', height: 20, fontSize: '0.65rem' }} />
+                )}
+                <Chip label={CATEGORY_LABELS[modalQuestion.category] ?? modalQuestion.category} size="small"
+                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', height: 20, fontSize: '0.65rem' }} />
+              </Box>
+
+              <Typography fontWeight="bold" sx={{ fontSize: { xs: '0.95rem', sm: '1.1rem' }, lineHeight: 1.4, pr: 4 }}>
+                {modalQuestion.question}
+              </Typography>
+            </Box>
+
+            <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
+              {/* Краткий ответ */}
+              <Box sx={{ p: { xs: 2, sm: 2.5 }, pb: 0 }}>
+                <Typography variant="overline" color="primary" sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>
+                  📝 Краткий ответ
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5, lineHeight: 1.6 }}>
+                  {modalQuestion.answer}
+                </Typography>
+              </Box>
+
+              {/* Подробный ответ */}
+              {modalQuestion.detailedAnswer && (
+                <>
+                  <Divider sx={{ mx: 2, my: 1.5 }} />
+                  <Accordion disableGutters elevation={0}
+                    sx={{ px: { xs: 1, sm: 1.5 }, '&:before': { display: 'none' } }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36, py: 0 }}>
+                      <Typography variant="overline" color="success.main" sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>
+                        📚 Подробный ответ
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 0 }}>
+                      <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                        {modalQuestion.detailedAnswer}
+                      </Typography>
+                    </AccordionDetails>
+                  </Accordion>
+                </>
+              )}
+
+              {/* Код */}
+              {modalQuestion.codeExample && (
+                <>
+                  <Divider sx={{ mx: 2, my: 1 }} />
+                  <Accordion disableGutters elevation={0}
+                    sx={{ px: { xs: 1, sm: 1.5 }, '&:before': { display: 'none' } }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36, py: 0 }}>
+                      <Typography variant="overline" color="warning.main" sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>
+                        💻 Пример кода
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 0 }}>
+                      <Paper sx={{
+                        p: 1.5, bgcolor: '#1e1e1e', color: '#d4d4d4',
+                        borderRadius: 2, overflow: 'auto',
+                        fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
+                        fontSize: '0.78rem', lineHeight: 1.5,
+                      }}>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{modalQuestion.codeExample}</pre>
+                      </Paper>
+                    </AccordionDetails>
+                  </Accordion>
+                </>
+              )}
+
+              <Box sx={{ height: 8 }} />
+            </DialogContent>
+
+            {/* Кнопки оценки */}
+            <DialogActions sx={{ p: { xs: 1.5, sm: 2 }, pt: 0, gap: 1 }}>
+              {modalQuestion.answered ? (
+                <Typography variant="caption" color="text.secondary" sx={{ flex: 1, textAlign: 'center' }}>
+                  ✅ Ответ уже оценён
+                </Typography>
+              ) : (
+                <>
+                  <Button fullWidth variant="contained" color="success" size="small"
+                    onClick={() => { handleAnswer(modalQuestion.id, true); setModalQuestion(null) }}
+                    sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                    ✅ Знаю
+                  </Button>
+                  <Button fullWidth variant="contained" color="error" size="small"
+                    onClick={() => { handleAnswer(modalQuestion.id, false); setModalQuestion(null) }}
+                    sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                    ❌ Не знаю
+                  </Button>
+                </>
+              )}
+            </DialogActions>
+          </Dialog>
+        )}
+      </AnimatePresence>
+
+      {/* Отступ чтобы контент не перекрывался кнопкой */}
+      <Box sx={{ height: 96 }} />
+
+      {/* Красивая кнопка Назад внизу по центру */}
+      <Box sx={{
+        position: 'fixed',
+        bottom: { xs: 70, sm: 24 },
+        left: 0, right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        zIndex: 999,
+        pointerEvents: 'none',
+      }}>
+        <motion.div
+          whileHover={{ scale: 1.06, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 400 }}
+          style={{ pointerEvents: 'all' }}
+        >
+          <Button
+            onClick={() => navigate(-1)}
+            startIcon={<ArrowBackIosNewIcon sx={{ fontSize: '0.8rem !important' }} />}
+            sx={{
+              background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}BB 100%)`,
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              letterSpacing: '0.03em',
+              px: 4,
+              py: 1.2,
+              borderRadius: '50px',
+              boxShadow: `0 6px 24px ${accentColor}55, 0 2px 8px rgba(0,0,0,0.2)`,
+              border: '1.5px solid rgba(255,255,255,0.25)',
+              textTransform: 'none',
+              '&:hover': {
+                background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}BB 100%)`,
+                boxShadow: `0 8px 32px ${accentColor}77, 0 4px 12px rgba(0,0,0,0.25)`,
+              }
+            }}
+          >
+            Назад
+          </Button>
+        </motion.div>
+      </Box>
+    </Container>
+  )
+}
+
+export default StudyPage
