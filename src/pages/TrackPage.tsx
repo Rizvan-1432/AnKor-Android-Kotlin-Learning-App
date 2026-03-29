@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Container, Typography, Box, CardActionArea,
-  LinearProgress, Tabs, Tab, Button, useTheme
+  LinearProgress, Tabs, Tab, Button
 } from '@mui/material'
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -33,7 +33,6 @@ const TOPICS: { id: string; name: string; icon: string; color: string; categorie
 const TrackPage: React.FC = () => {
   const { trackId } = useParams<{ trackId: string }>()
   const navigate = useNavigate()
-  const theme = useTheme()
   const { questions } = useAppStore()
   const [tab, setTab] = useState(0)
 

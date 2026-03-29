@@ -22,25 +22,6 @@ import { motion } from 'framer-motion'
 import { useAppStore } from '../store'
 import { QuestionLevel } from '../types'
 
-const CATEGORY_OPTIONS: { value: QuestionCategory; label: string }[] = [
-  { value: 'kotlin', label: 'Kotlin' },
-  { value: 'android-sdk', label: 'Android SDK' },
-  { value: 'ui-ux', label: 'UI/UX' },
-  { value: 'architecture', label: 'Архитектура' },
-  { value: 'jetpack', label: 'Jetpack' },
-  { value: 'dependency-injection', label: 'DI (Hilt/Dagger)' },
-  { value: 'networking', label: 'Сеть (Retrofit/OkHttp)' },
-  { value: 'databases', label: 'Базы данных (Room)' },
-  { value: 'performance', label: 'Производительность' },
-  { value: 'multithreading', label: 'Многопоточность (Coroutines)' },
-  { value: 'security', label: 'Безопасность' },
-  { value: 'testing', label: 'Тестирование' },
-  { value: 'ci-cd', label: 'CI/CD' },
-  { value: 'system', label: 'Системные вопросы' },
-  { value: 'behavioral', label: 'Поведенческие вопросы' },
-  { value: 'publishing', label: 'Публикация (Google Play)' },
-]
-
 const DARK_ONLY_GRADIENTS = ['black', 'dark-blue', 'dark-gray']
 
 const SettingsPage: React.FC = () => {

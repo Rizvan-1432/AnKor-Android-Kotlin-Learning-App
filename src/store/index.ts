@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { AppState, AppActions, Question, Goal, Settings, StudySession, Stats, Achievement } from '../types'
+import { AppState, AppActions, Question, Goal, StudySession } from '../types'
 import { apiService } from '../services/api'
 import { offlineManager } from '../services/offlineManager'
 import { ApiError } from '../config/api'

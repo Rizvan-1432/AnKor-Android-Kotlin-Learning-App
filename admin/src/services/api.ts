@@ -1,6 +1,13 @@
 import { Question, QuestionLevel, QuestionCategory } from '../types'
 
-const BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://ankor-android-kotlin-learning-app.onrender.com/api'
+// 1) VITE_API_URL (Vercel / явная настройка)
+// 2) DEV — относительный /api (прокси в admin/vite.config.ts → localhost:3000)
+// 3) PROD без env — тот же API, что и у основного приложения
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? '/api'
+    : 'https://ankor-android-kotlin-learning-app.onrender.com/api')
 
 const getToken = () => localStorage.getItem('admin_token')
 

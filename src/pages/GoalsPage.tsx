@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   Container,
   Typography,
@@ -16,7 +16,6 @@ import {
   DialogContent,
   DialogActions,
   Snackbar,
-  Alert,
   useTheme
 } from '@mui/material'
 import { motion } from 'framer-motion'
@@ -25,11 +24,10 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import { useAppStore } from '../store'
 import { Goal } from '../types'
 
-const GoalsPage: React.FC = () => {
+const GoalsPage = () => {
   const theme = useTheme()
-  const { goals, addGoal, updateGoal, deleteGoal, questions, stats } = useAppStore()
+  const { goals, addGoal, updateGoal, deleteGoal, questions } = useAppStore()
   const [showAddDialog, setShowAddDialog] = useState(false)
-  const [editingGoal, setEditingGoal] = useState<Goal | null>(null)
   const [snackbar, setSnackbar] = useState({ open: false, message: '' })
   
   const [newGoal, setNewGoal] = useState({

@@ -1,4 +1,4 @@
-import { API_CONFIG, ApiResponse, PaginatedResponse, ApiError, HttpMethod } from '@/config/api'
+import { API_CONFIG, ApiResponse, ApiError, HttpMethod } from '@/config/api'
 import { Question, QuestionLevel, UserStats, Goal, Settings } from '@/types'
 
 class ApiService {

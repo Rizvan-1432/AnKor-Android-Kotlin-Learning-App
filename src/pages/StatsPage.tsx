@@ -22,7 +22,7 @@ import { QuestionLevel } from '../types'
 
 const StatsPage: React.FC = () => {
   const theme = useTheme()
-  const { questions, stats, resetStats } = useAppStore()
+  const { questions, resetStats } = useAppStore()
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '' })
 
