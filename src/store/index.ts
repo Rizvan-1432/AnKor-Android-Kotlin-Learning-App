@@ -507,9 +507,16 @@ const useAppStore = create<AppState & AppActions>()(
     },
     {
       name: 'ankor-storage',
+      version: 2,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persistedState: any) => {
+        if (persistedState && typeof persistedState === 'object') {
+          const { questions, ...rest } = persistedState
+          return { ...rest, questions: [] }
+        }
+        return persistedState
+      },
       partialize: (state) => ({
-        questions: state.questions,
         stats: state.stats,
         goals: state.goals,
         settings: state.settings,
