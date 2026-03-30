@@ -80,6 +80,18 @@ const useAppStore = create<AppState & AppActions>()(
 
           return { questions: updatedQuestions, stats: newStats, goals: updatedGoals }
         })
+        // После локального обновления отправляем актуальное состояние вопроса на сервер,
+        // чтобы админ-панель видела реальные counters (correct/incorrect/studied).
+        const updated = get().questions.find(q => q.id === id)
+        if (updated) {
+          void get().updateQuestionWithAPI(id, {
+            studied: updated.studied,
+            studiedAt: updated.studiedAt,
+            correct: updated.correct,
+            incorrect: updated.incorrect,
+            answered: updated.answered,
+          })
+        }
       },
 
       markIncorrect: (id) => {
@@ -116,6 +128,17 @@ const useAppStore = create<AppState & AppActions>()(
 
           return { questions: updatedQuestions, stats: newStats, goals: updatedGoals }
         })
+        // Синхронизируем результат ответа с API для отображения в админке.
+        const updated = get().questions.find(q => q.id === id)
+        if (updated) {
+          void get().updateQuestionWithAPI(id, {
+            studied: updated.studied,
+            studiedAt: updated.studiedAt,
+            correct: updated.correct,
+            incorrect: updated.incorrect,
+            answered: updated.answered,
+          })
+        }
       },
 
       // Goal actions
