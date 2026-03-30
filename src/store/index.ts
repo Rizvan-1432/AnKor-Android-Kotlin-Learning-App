@@ -317,12 +317,24 @@ const useAppStore = create<AppState & AppActions>()(
         try {
           const response = await apiService.getQuestions(level as any)
           if (response.success && response.data) {
-            // Мёрж: новые вопросы с сервера добавляем, существующие не трогаем (сохраняем прогресс)
+            // Сервер — источник истины: берём только вопросы с API.
+            // Локальный прогресс переносим только для совпадающих id.
             set((state) => {
-              const existingIds = new Set(state.questions.map(q => q.id))
-              const newQuestions = response.data!.filter(q => !existingIds.has(q.id))
+              const localById = new Map(state.questions.map(q => [q.id, q]))
+              const serverQuestions = response.data!.map((q) => {
+                const local = localById.get(q.id)
+                if (!local) return q
+                return {
+                  ...q,
+                  studied: local.studied,
+                  studiedAt: local.studiedAt,
+                  correct: local.correct,
+                  incorrect: local.incorrect,
+                  answered: local.answered,
+                }
+              })
               return {
-                questions: [...state.questions, ...newQuestions],
+                questions: serverQuestions,
                 loading: false,
                 lastSync: new Date().toISOString()
               }
