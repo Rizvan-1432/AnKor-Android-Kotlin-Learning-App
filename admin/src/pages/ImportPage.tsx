@@ -6,6 +6,7 @@ import {
 import UploadIcon from '@mui/icons-material/Upload'
 import LinkIcon from '@mui/icons-material/Link'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import DownloadIcon from '@mui/icons-material/Download'
 import { motion } from 'framer-motion'
 import { useAdminStore } from '../store'
 import { Question } from '../types'
@@ -15,10 +16,11 @@ const EXAMPLE_CSV = `question,answer,detailedAnswer,codeExample,level,category
 Что такое Coroutine?,Корутины — лёгкие потоки Kotlin,,fun main() = runBlocking {},middle,kotlin`
 
 const ImportPage: React.FC = () => {
-  const { bulkCreate } = useAdminStore()
+  const { bulkCreate, loadQuestions } = useAdminStore()
 
   const [sheetsUrl, setSheetsUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [exportBusy, setExportBusy] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [preview, setPreview] = useState<Partial<Question>[]>([])
@@ -57,6 +59,27 @@ const ImportPage: React.FC = () => {
     reader.readAsText(file)
   }
 
+  const handleExportJson = async () => {
+    setExportBusy(true)
+    setError('')
+    try {
+      await loadQuestions()
+      const rows = useAdminStore.getState().questions
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' })
+      const a = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      a.href = url
+      a.download = `ankor-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      setSuccess('Файл JSON скачан (резервная копия каталога)')
+    } catch {
+      setError('Не удалось выгрузить вопросы')
+    } finally {
+      setExportBusy(false)
+    }
+  }
+
   // Импорт из Google Sheets
   const handleSheetsImport = async () => {
     if (!sheetsUrl.trim()) return
@@ -80,9 +103,20 @@ const ImportPage: React.FC = () => {
   return (
     <Box>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight="bold">Импорт вопросов</Typography>
-          <Typography color="text.secondary" variant="body2">Загрузите вопросы из JSON, CSV или Google Sheets</Typography>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, flexWrap: 'wrap' }}>
+          <Box>
+            <Typography variant="h4" fontWeight="bold">Импорт вопросов</Typography>
+            <Typography color="text.secondary" variant="body2">Загрузите вопросы из JSON, CSV или Google Sheets</Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            startIcon={exportBusy ? <CircularProgress size={16} /> : <DownloadIcon />}
+            disabled={exportBusy}
+            onClick={handleExportJson}
+            sx={{ borderRadius: 2 }}
+          >
+            Экспорт JSON (бэкап)
+          </Button>
         </Box>
 
         {error   && <Alert severity="error"   sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}

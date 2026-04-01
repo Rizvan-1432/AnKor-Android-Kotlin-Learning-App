@@ -22,7 +22,9 @@ export const API_CONFIG = {
     STATS: '/stats',
     GOALS: '/goals',
     SETTINGS: '/settings',
-    AUTH: '/auth'
+    AUTH: '/auth',
+    META: '/meta',
+    HEALTH: '/health',
   }
 } as const
 

@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Container, Typography, Box, CardActionArea,
-  LinearProgress, Tabs, Tab, Button
+  Container, Typography, Box, Card, CardActionArea,
+  LinearProgress, Tabs, Tab, Button, TextField, Chip
 } from '@mui/material'
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -35,6 +35,29 @@ const TrackPage: React.FC = () => {
   const navigate = useNavigate()
   const { questions } = useAppStore()
   const [tab, setTab] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const searchNorm = searchQuery.trim().toLowerCase()
+  const levelsFiltered = useMemo(
+    () =>
+      LEVELS.filter(
+        l =>
+          !searchNorm ||
+          l.name.toLowerCase().includes(searchNorm) ||
+          l.description.toLowerCase().includes(searchNorm)
+      ),
+    [searchNorm]
+  )
+  const topicsFiltered = useMemo(
+    () =>
+      TOPICS.filter(
+        t =>
+          !searchNorm ||
+          t.name.toLowerCase().includes(searchNorm) ||
+          t.categories.some(c => c.toLowerCase().includes(searchNorm))
+      ),
+    [searchNorm]
+  )
 
   const track = TRACKS.find(t => t.id === trackId)
 
@@ -113,6 +136,15 @@ const TrackPage: React.FC = () => {
         </Box>
       </motion.div>
 
+      <TextField
+        size="small"
+        fullWidth
+        placeholder="Поиск уровня или темы..."
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+        sx={{ mb: 2 }}
+      />
+
       {/* Табы */}
       <Tabs
         value={tab}
@@ -131,7 +163,7 @@ const TrackPage: React.FC = () => {
             initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 14 }} transition={{ duration: 0.22 }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-              {LEVELS.map((level, index) => {
+              {levelsFiltered.map((level, index) => {
                 const { total, studied: s } = getLevelStats(level.id)
                 const pct = total > 0 ? Math.round((s / total) * 100) : 0
                 return (
@@ -139,12 +171,13 @@ const TrackPage: React.FC = () => {
                     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.06 }}
                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <Card sx={{ borderRadius: 3, overflow: 'hidden', height: '100%' }}>
                     <CardActionArea
                       onClick={() => navigate(`/study?level=${level.id}`)}
                       sx={{
-                        borderRadius: 3,
+                        borderRadius: 0,
                         background: `linear-gradient(135deg, ${level.color}20 0%, ${level.color}0a 100%)`,
-                        border: `1.5px solid ${level.color}55`,
+                        borderBottom: `1.5px solid ${level.color}33`,
                         p: { xs: 1.5, sm: 2 },
                         display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, height: '100%',
                       }}
@@ -184,6 +217,15 @@ const TrackPage: React.FC = () => {
                         }} />
                       </Box>
                     </CardActionArea>
+                    <Box sx={{ px: 1, pb: 1, pt: 0.5, display: 'flex', gap: 0.5, flexWrap: 'wrap', bgcolor: 'action.hover' }}>
+                      <Chip size="small" label="Ошибки" sx={{ fontSize: '0.65rem', height: 22 }}
+                        onClick={() => navigate(`/study?level=${level.id}&mode=mistakes&limit=25`)} />
+                      <Chip size="small" label="Слабые" sx={{ fontSize: '0.65rem', height: 22 }}
+                        onClick={() => navigate(`/study?level=${level.id}&mode=weak&limit=25`)} />
+                      <Chip size="small" label="SRS" sx={{ fontSize: '0.65rem', height: 22 }}
+                        onClick={() => navigate(`/study?level=${level.id}&mode=srs&limit=25`)} />
+                    </Box>
+                    </Card>
                   </motion.div>
                 )
               })}
@@ -195,7 +237,7 @@ const TrackPage: React.FC = () => {
             initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -14 }} transition={{ duration: 0.22 }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
-              {TOPICS.map((topic, index) => {
+              {topicsFiltered.map((topic, index) => {
                 const { total, studied: s } = getTopicStats(topic.categories)
                 const pct = total > 0 ? Math.round((s / total) * 100) : 0
                 const url = `/study?categories=${topic.categories.join(',')}&trackName=${encodeURIComponent(topic.name)}`
@@ -204,12 +246,13 @@ const TrackPage: React.FC = () => {
                     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.06 }}
                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <Card sx={{ borderRadius: 3, overflow: 'hidden', height: '100%' }}>
                     <CardActionArea
                       onClick={() => navigate(url)}
                       sx={{
-                        borderRadius: 3,
+                        borderRadius: 0,
                         background: `linear-gradient(135deg, ${topic.color}20 0%, ${topic.color}0a 100%)`,
-                        border: `1.5px solid ${topic.color}55`,
+                        borderBottom: `1.5px solid ${topic.color}33`,
                         p: { xs: 1.5, sm: 2 },
                         display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1, height: '100%',
                       }}
@@ -249,6 +292,15 @@ const TrackPage: React.FC = () => {
                         }} />
                       </Box>
                     </CardActionArea>
+                    <Box sx={{ px: 1, pb: 1, pt: 0.5, display: 'flex', gap: 0.5, flexWrap: 'wrap', bgcolor: 'action.hover' }}>
+                      <Chip size="small" label="Ошибки" sx={{ fontSize: '0.65rem', height: 22 }}
+                        onClick={() => navigate(`${url}&mode=mistakes&limit=20`)} />
+                      <Chip size="small" label="Слабые" sx={{ fontSize: '0.65rem', height: 22 }}
+                        onClick={() => navigate(`${url}&mode=weak&limit=20`)} />
+                      <Chip size="small" label="SRS" sx={{ fontSize: '0.65rem', height: 22 }}
+                        onClick={() => navigate(`${url}&mode=srs&limit=20`)} />
+                    </Box>
+                    </Card>
                   </motion.div>
                 )
               })}

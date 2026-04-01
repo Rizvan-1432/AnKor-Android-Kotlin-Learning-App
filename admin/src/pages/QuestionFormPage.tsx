@@ -3,10 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   Box, Typography, Card, CardContent, Button, TextField,
   Select, MenuItem, FormControl, InputLabel, Grid, Alert,
-  CircularProgress
+  CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Chip
 } from '@mui/material'
 import SaveIcon from '@mui/icons-material/Save'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import { motion } from 'framer-motion'
 import { useAdminStore } from '../store'
 import { LEVEL_OPTIONS, CATEGORY_OPTIONS, QuestionLevel, QuestionCategory } from '../types'
@@ -29,6 +30,7 @@ const QuestionFormPage: React.FC = () => {
   const [fetching, setFetching] = useState(isEdit)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -89,9 +91,18 @@ const QuestionFormPage: React.FC = () => {
   return (
     <Box>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
           <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/questions')} variant="outlined" size="small">
             Назад
+          </Button>
+          <Button
+            startIcon={<VisibilityIcon />}
+            variant="outlined"
+            size="small"
+            onClick={() => setPreviewOpen(true)}
+            disabled={!form.question.trim() && !form.answer.trim()}
+          >
+            Превью как в приложении
           </Button>
           <Box>
             <Typography variant="h4" fontWeight="bold">
@@ -185,6 +196,34 @@ const QuestionFormPage: React.FC = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Превью карточки</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+            <Chip label={LEVEL_OPTIONS.find(o => o.value === form.level)?.label ?? form.level} size="small" color="primary" />
+            <Chip label={CATEGORY_OPTIONS.find(o => o.value === form.category)?.label ?? form.category} size="small" variant="outlined" />
+          </Box>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Вопрос</Typography>
+          <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.5 }}>{form.question || '—'}</Typography>
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom>Краткий ответ</Typography>
+          <Typography variant="body2" sx={{ lineHeight: 1.6 }}>{form.answer || '—'}</Typography>
+          {form.detailedAnswer?.trim() && (
+            <>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mt: 2 }} gutterBottom>Подробно</Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>{form.detailedAnswer}</Typography>
+            </>
+          )}
+          {form.codeExample?.trim() && (
+            <Box component="pre" sx={{ mt: 2, p: 1.5, borderRadius: 2, bgcolor: 'action.hover', fontSize: '0.75rem', overflow: 'auto' }}>
+              {form.codeExample}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewOpen(false)}>Закрыть</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

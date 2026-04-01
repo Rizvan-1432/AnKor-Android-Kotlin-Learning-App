@@ -12,6 +12,7 @@ interface AdminStore {
   loadQuestions: (filters?: { level?: QuestionLevel; category?: QuestionCategory; search?: string }) => Promise<void>
   createQuestion: (q: Omit<Question, 'id' | 'createdAt' | 'studied' | 'correct' | 'incorrect'>) => Promise<void>
   updateQuestion: (id: string, q: Partial<Question>) => Promise<void>
+  batchUpdateQuestions: (ids: string[], patch: Partial<Question>) => Promise<void>
   deleteQuestion: (id: string) => Promise<void>
   bulkCreate: (questions: Omit<Question, 'id' | 'createdAt' | 'studied' | 'correct' | 'incorrect'>[]) => Promise<number>
   clearError: () => void
@@ -57,6 +58,21 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
       }))
     } catch (e) {
       set({ loading: false, error: e instanceof Error ? e.message : 'Ошибка обновления' })
+      throw e
+    }
+  },
+
+  batchUpdateQuestions: async (ids, patch) => {
+    if (ids.length === 0) return
+    set({ loading: true, error: null })
+    try {
+      for (const id of ids) {
+        await questionsApi.update(id, patch)
+      }
+      await get().loadQuestions()
+      set({ loading: false })
+    } catch (e) {
+      set({ loading: false, error: e instanceof Error ? e.message : 'Ошибка пакетного обновления' })
       throw e
     }
   },

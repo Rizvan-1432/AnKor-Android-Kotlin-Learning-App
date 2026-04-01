@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Container, Typography, Box, Card, CardContent, Button,
@@ -53,6 +53,37 @@ const highlightCode = (code: string) => {
   return Prism.highlight(code, grammar, 'kotlin')
 }
 
+/** Режимы: ошибки, слабые темы, интервальное повторение; лимит карточек за сессию */
+function applyStudyModeAndLimit(
+  list: Question[],
+  mode: string | null,
+  limit: number | null
+): Question[] {
+  let arr = [...list]
+  if (mode === 'mistakes') {
+    arr = arr.filter(q => q.incorrect > 0)
+    arr.sort((a, b) => b.incorrect - a.incorrect || b.correct - a.correct)
+  } else if (mode === 'weak') {
+    arr = arr.filter(q => q.correct + q.incorrect > 0)
+    arr.sort((a, b) => {
+      const ra = a.incorrect / (a.correct + a.incorrect + 0.001)
+      const rb = b.incorrect / (b.correct + b.incorrect + 0.001)
+      return rb - ra
+    })
+  } else if (mode === 'srs') {
+    arr.sort((a, b) => {
+      if (!a.studiedAt && !b.studiedAt) return b.incorrect - a.incorrect
+      if (!a.studiedAt) return -1
+      if (!b.studiedAt) return 1
+      return new Date(a.studiedAt).getTime() - new Date(b.studiedAt).getTime()
+    })
+  }
+  if (limit != null && limit > 0) {
+    arr = arr.slice(0, limit)
+  }
+  return arr
+}
+
 const StudyPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -61,6 +92,13 @@ const StudyPage: React.FC = () => {
   const level = searchParams.get('level') as QuestionLevel
   const categoriesParam = searchParams.get('categories')
   const trackName = searchParams.get('trackName')
+  const mode = searchParams.get('mode')
+  const limitRaw = searchParams.get('limit')
+  const sessionLimit = (() => {
+    if (!limitRaw) return null
+    const n = parseInt(limitRaw, 10)
+    return !Number.isNaN(n) && n > 0 ? n : null
+  })()
 
   const [currentPage, setCurrentPage] = useState(1)
   const [levelQuestions, setLevelQuestions] = useState<Question[]>([])
@@ -92,12 +130,14 @@ const StudyPage: React.FC = () => {
 
       if (!isMounted) return
 
+      let base: Question[] = []
       if (level) {
-        setLevelQuestions(questions.filter(q => q.level === level))
+        base = questions.filter(q => q.level === level)
       } else if (categoriesParam) {
         const cats = categoriesParam.split(',')
-        setLevelQuestions(questions.filter(q => cats.includes(q.category)))
+        base = questions.filter(q => cats.includes(q.category))
       }
+      setLevelQuestions(applyStudyModeAndLimit(base, mode, sessionLimit))
       setLoading(false)
     }
 
@@ -106,7 +146,7 @@ const StudyPage: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [level, categoriesParam, questions, navigate, loadQuestions])
+  }, [level, categoriesParam, questions, navigate, loadQuestions, mode, sessionLimit])
 
   // Синхронизируем modalQuestion с актуальными данными из store
   useEffect(() => {
@@ -122,10 +162,43 @@ const StudyPage: React.FC = () => {
 
   const accentColor = level ? (LEVEL_COLORS[level] ?? '#3b82f6') : '#3b82f6'
 
-  const handleAnswer = (questionId: string, isCorrect: boolean) => {
+  const handleAnswer = useCallback((questionId: string, isCorrect: boolean) => {
     if (isCorrect) markCorrect(questionId)
     else markIncorrect(questionId)
-  }
+  }, [markCorrect, markIncorrect])
+
+  // Горячие клавиши: 1/Знаю, 2/Не знаю, Пробел/Enter — ответ (первый неотвеченный на странице)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return
+      if (modalQuestion) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setModalQuestion(null)
+        }
+        return
+      }
+      const first = currentQuestions.find(q => !q.answered)
+      if (!first) return
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault()
+        setModalQuestion(first)
+        return
+      }
+      if (e.key === '1' || e.key === 'y' || e.key === 'Y' || e.key === 'z') {
+        e.preventDefault()
+        handleAnswer(first.id, true)
+      }
+      if (e.key === '2' || e.key === 'n' || e.key === 'N' || e.key === 'x') {
+        e.preventDefault()
+        handleAnswer(first.id, false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [currentQuestions, modalQuestion, handleAnswer])
 
   if (loading) {
     return (
@@ -166,6 +239,13 @@ const StudyPage: React.FC = () => {
             sx={{ fontSize: { xs: '0.74rem', sm: '0.88rem' }, fontWeight: 700, letterSpacing: '0.01em' }}
           >
             {levelQuestions.length} вопроса • страница {currentPage}/{totalPages}
+            {mode === 'mistakes' && ' • только с ошибками'}
+            {mode === 'weak' && ' • слабые темы'}
+            {mode === 'srs' && ' • повторение (SRS)'}
+            {sessionLimit != null && ` • сессия до ${sessionLimit} шт.`}
+          </Typography>
+          <Typography variant="caption" display="block" sx={{ mt: 0.5, opacity: 0.75, fontSize: '0.68rem' }}>
+            ⌨️ 1 — Знаю · 2 — Не знаю · Пробел — ответ · Esc — закрыть окно
           </Typography>
         </Box>
       </motion.div>

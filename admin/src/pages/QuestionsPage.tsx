@@ -5,12 +5,13 @@ import {
   MenuItem, FormControl, InputLabel, Chip, IconButton, Dialog,
   DialogTitle, DialogContent, DialogActions, Alert, Tooltip,
   CircularProgress, InputAdornment, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper
+  TableContainer, TableHead, TableRow, Paper, Checkbox, Menu
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SearchIcon from '@mui/icons-material/Search'
+import TuneIcon from '@mui/icons-material/Tune'
 import { motion } from 'framer-motion'
 import { useAdminStore } from '../store'
 import { LEVEL_OPTIONS, CATEGORY_OPTIONS, LEVEL_COLORS, QuestionLevel, QuestionCategory } from '../types'
@@ -18,13 +19,16 @@ import { LEVEL_OPTIONS, CATEGORY_OPTIONS, LEVEL_COLORS, QuestionLevel, QuestionC
 const QuestionsPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { questions, loadQuestions, deleteQuestion, loading, error } = useAdminStore()
+  const { questions, loadQuestions, deleteQuestion, batchUpdateQuestions, loading, error } = useAdminStore()
 
   const [search, setSearch] = useState('')
   const [filterLevel, setFilterLevel] = useState<QuestionLevel | ''>((searchParams.get('level') as QuestionLevel) || '')
   const [filterCategory, setFilterCategory] = useState<QuestionCategory | ''>((searchParams.get('category') as QuestionCategory) || '')
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [snackMsg, setSnackMsg] = useState('')
+  const [selected, setSelected] = useState<string[]>([])
+  const [batchMenu, setBatchMenu] = useState<null | 'level' | 'category'>(null)
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
 
   useEffect(() => { loadQuestions() }, [])
 
@@ -45,6 +49,38 @@ const QuestionsPage: React.FC = () => {
 
   const getCategoryLabel = (cat: string) => CATEGORY_OPTIONS.find(c => c.value === cat)?.label ?? cat
 
+  const filteredIds = filtered.map(q => q.id)
+  const allSelected = filteredIds.length > 0 && filteredIds.every(id => selected.includes(id))
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(s => s.filter(id => !filteredIds.includes(id)))
+    } else {
+      setSelected(s => [...new Set([...s, ...filteredIds])])
+    }
+  }
+  const toggleOne = (id: string) => {
+    setSelected(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]))
+  }
+
+  const runBatchLevel = async (lvl: QuestionLevel) => {
+    const n = selected.length
+    await batchUpdateQuestions(selected, { level: lvl })
+    setSelected([])
+    setBatchMenu(null)
+    setMenuAnchor(null)
+    setSnackMsg(`Уровень обновлён (${n})`)
+    setTimeout(() => setSnackMsg(''), 3000)
+  }
+  const runBatchCategory = async (cat: QuestionCategory) => {
+    const n = selected.length
+    await batchUpdateQuestions(selected, { category: cat })
+    setSelected([])
+    setBatchMenu(null)
+    setMenuAnchor(null)
+    setSnackMsg(`Категория обновлена (${n})`)
+    setTimeout(() => setSnackMsg(''), 3000)
+  }
+
   return (
     <Box>
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -62,6 +98,55 @@ const QuestionsPage: React.FC = () => {
 
         {snackMsg && <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>{snackMsg}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+
+        {selected.length > 0 && (
+          <Card sx={{ borderRadius: 2, mb: 2, bgcolor: 'action.selected' }}>
+            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography variant="body2" fontWeight="bold">Выбрано: {selected.length}</Typography>
+                <Button
+                  size="small"
+                  startIcon={<TuneIcon />}
+                  variant="outlined"
+                  onClick={e => {
+                    setMenuAnchor(e.currentTarget)
+                    setBatchMenu('level')
+                  }}
+                >
+                  Уровень
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={e => {
+                    setMenuAnchor(e.currentTarget)
+                    setBatchMenu('category')
+                  }}
+                >
+                  Категория
+                </Button>
+                <Button size="small" onClick={() => setSelected([])}>Снять выбор</Button>
+              </Box>
+              <Menu
+                anchorEl={menuAnchor}
+                open={batchMenu !== null}
+                onClose={() => {
+                  setBatchMenu(null)
+                  setMenuAnchor(null)
+                }}
+              >
+                {batchMenu === 'level' &&
+                  LEVEL_OPTIONS.map(o => (
+                    <MenuItem key={o.value} onClick={() => runBatchLevel(o.value)}>{o.label}</MenuItem>
+                  ))}
+                {batchMenu === 'category' &&
+                  CATEGORY_OPTIONS.map(o => (
+                    <MenuItem key={o.value} onClick={() => runBatchCategory(o.value)}>{o.label}</MenuItem>
+                  ))}
+              </Menu>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Фильтры */}
         <Card sx={{ borderRadius: 3, mb: 3 }}>
@@ -106,6 +191,14 @@ const QuestionsPage: React.FC = () => {
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: 'action.hover' }}>
+                  <TableCell padding="checkbox" sx={{ width: 48 }}>
+                    <Checkbox
+                      size="small"
+                      indeterminate={selected.length > 0 && !allSelected}
+                      checked={allSelected}
+                      onChange={toggleAll}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 'bold', width: '40%' }}>Вопрос</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Уровень</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Категория</TableCell>
@@ -116,13 +209,16 @@ const QuestionsPage: React.FC = () => {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                       Вопросы не найдены
                     </TableCell>
                   </TableRow>
                 ) : (
                   filtered.map(q => (
-                    <TableRow key={q.id} hover>
+                    <TableRow key={q.id} hover selected={selected.includes(q.id)}>
+                      <TableCell padding="checkbox">
+                        <Checkbox size="small" checked={selected.includes(q.id)} onChange={() => toggleOne(q.id)} />
+                      </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{
                           overflow: 'hidden', textOverflow: 'ellipsis',

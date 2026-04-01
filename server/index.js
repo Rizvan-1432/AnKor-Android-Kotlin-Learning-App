@@ -98,6 +98,21 @@ const authMiddleware = (req, res, next) => {
 const ok  = (res, data, message = 'Success') => res.json({ success: true, data, message })
 const err = (res, message = 'Error', status = 400) => res.status(status).json({ success: false, error: message })
 
+// Публичные служебные маршруты (мониторинг, версия каталога)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ ok: true, uptime: process.uptime() })
+})
+
+app.get('/api/meta', (req, res) => {
+  const row = db.prepare(
+    'SELECT COUNT(*) AS total, MAX(createdAt) AS lastCreated FROM questions'
+  ).get()
+  ok(res, {
+    questionCount: row.total,
+    lastUpdated: row.lastCreated || null,
+  }, 'Meta')
+})
+
 const rowToQuestion = r => ({
   id: r.id, question: r.question, answer: r.answer,
   detailedAnswer: r.detailedAnswer || undefined,

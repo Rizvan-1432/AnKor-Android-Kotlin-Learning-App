@@ -1,21 +1,27 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Container,
   Typography,
   Box,
   CardActionArea,
   Paper,
-  useTheme
+  useTheme,
+  CircularProgress
 } from '@mui/material'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store'
 import SyncStatus from '../components/SyncStatus'
+import apiService from '../services/api'
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate()
   const theme = useTheme()
-  const { questions, loadQuestions } = useAppStore()
+  const { questions, loadQuestions, settings } = useAppStore()
+  const [serverMeta, setServerMeta] = useState<{
+    questionCount: number
+    lastUpdated: string | null
+  } | null>(null)
 
   // Загружаем вопросы при каждом монтировании — store делает merge,
   // прогресс существующих вопросов сохраняется, новые добавляются
@@ -23,11 +29,29 @@ const HomePage: React.FC = () => {
     loadQuestions()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await apiService.getMeta()
+        if (!cancelled && res.success && res.data) setServerMeta(res.data)
+      } catch {
+        if (!cancelled) setServerMeta(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [questions.length])
+
   const today = new Date().toDateString()
   const studiedToday = questions.filter(q => {
     if (!q.studiedAt) return false
     return new Date(q.studiedAt).toDateString() === today
   }).length
+
+  const dailyGoal = Math.max(1, settings.dailyGoal ?? 10)
+  const dailyPct = Math.min(100, (studiedToday / dailyGoal) * 100)
 
   // Считаем напрямую из questions — так же как StatsPage, не перезаписывается сервером
   const totalQuestions = questions.length
@@ -100,6 +124,60 @@ const HomePage: React.FC = () => {
             <Typography variant="body2" sx={{ opacity: 0.9, mb: 1.5, fontSize: { xs: '0.8rem', sm: '1rem' } }}>
               💡 Каждый эксперт когда-то был новичком. Твоя мечта стать Android-разработчиком — это не фантазия, а план, который мы воплотим вместе!
             </Typography>
+
+            {/* Цель на сегодня */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                mb: 2,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Box sx={{ position: 'relative', width: 72, height: 72 }}>
+                <CircularProgress
+                  variant="determinate"
+                  value={dailyPct}
+                  size={72}
+                  thickness={5}
+                  sx={{
+                    color: 'white',
+                    opacity: 0.95,
+                    '& .MuiCircularProgress-circle': { strokeLinecap: 'round' },
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <Typography sx={{ fontWeight: 800, fontSize: '1rem', lineHeight: 1 }}>
+                    {studiedToday}/{dailyGoal}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.6rem', opacity: 0.85 }}>сегодня</Typography>
+                </Box>
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 140 }}>
+                <Typography sx={{ fontWeight: 700, fontSize: '0.85rem' }}>Цель дня</Typography>
+                <Typography sx={{ fontSize: '0.72rem', opacity: 0.88, mt: 0.3 }}>
+                  Отметьте «Знаю» или «Не знаю» по карточкам. Настройка лимита — в разделе «Настройки».
+                </Typography>
+              </Box>
+            </Box>
+
+            {serverMeta && (
+              <Typography sx={{ fontSize: '0.68rem', opacity: 0.8, mb: 1 }}>
+                Сервер: {serverMeta.questionCount} вопросов в базе
+                {serverMeta.lastUpdated &&
+                  ` · последнее добавление ${new Date(serverMeta.lastUpdated).toLocaleDateString('ru-RU')}`}
+              </Typography>
+            )}
             
             {/* Stats Row — компактная горизонтальная строка */}
             <Box

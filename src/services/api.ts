@@ -141,6 +141,20 @@ class ApiService {
   async syncStats(stats: UserStats): Promise<ApiResponse<UserStats>> {
     return this.request<UserStats>(`${API_CONFIG.ENDPOINTS.STATS}/sync`, 'POST', stats)
   }
+
+  /** Метаданные каталога на сервере (публично) */
+  async getMeta(): Promise<
+    ApiResponse<{ questionCount: number; lastUpdated: string | null }>
+  > {
+    return this.request(`${API_CONFIG.ENDPOINTS.META}`)
+  }
+
+  /** Healthcheck (публично, для мониторинга) */
+  async getHealth(): Promise<{ ok: boolean; uptime?: number }> {
+    const url = `${this.baseURL}${API_CONFIG.ENDPOINTS.HEALTH}`
+    const res = await fetch(url, { signal: AbortSignal.timeout(this.timeout) })
+    return res.json()
+  }
 }
 
 // Экспортируем singleton

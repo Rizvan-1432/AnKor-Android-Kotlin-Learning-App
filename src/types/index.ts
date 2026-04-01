@@ -58,11 +58,19 @@ export interface Goal {
   createdAt: string
 }
 
+export type FontScale = 'normal' | 'large' | 'xlarge'
+
 export interface Settings {
   theme: 'light' | 'dark' | 'auto'
   studyReminders: boolean
   reminderTime: string
   backgroundGradient: 'blue' | 'orange' | 'purple' | 'green' | 'black' | 'dark-blue' | 'dark-gray' | 'random'
+  /** Цель карточек за сегодня (главная страница) */
+  dailyGoal: number
+  fontScale: FontScale
+  highContrast: boolean
+  /** Анонимная аналитика (Plausible), только если задан VITE_PLAUSIBLE_DOMAIN */
+  analyticsConsent: boolean
 }
 
 export interface StudySession {

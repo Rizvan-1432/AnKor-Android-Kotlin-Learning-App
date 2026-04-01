@@ -27,7 +27,11 @@ const useAppStore = create<AppState & AppActions>()(
         theme: 'light',
         studyReminders: false,
         reminderTime: '19:00',
-        backgroundGradient: 'blue'
+        backgroundGradient: 'blue',
+        dailyGoal: 10,
+        fontScale: 'normal',
+        highContrast: false,
+        analyticsConsent: false,
       },
       currentSession: undefined,
       achievements: [],
@@ -303,7 +307,11 @@ const useAppStore = create<AppState & AppActions>()(
             theme: 'light',
             studyReminders: false,
             reminderTime: '19:00',
-            backgroundGradient: 'blue'
+            backgroundGradient: 'blue',
+            dailyGoal: 10,
+            fontScale: 'normal',
+            highContrast: false,
+            analyticsConsent: false,
           },
           currentSession: undefined,
           achievements: []
@@ -519,12 +527,22 @@ const useAppStore = create<AppState & AppActions>()(
     },
     {
       name: 'ankor-storage',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       migrate: (persistedState: any) => {
         if (persistedState && typeof persistedState === 'object') {
-          const { questions, ...rest } = persistedState
-          return { ...rest, questions: [] }
+          const { questions: _q, ...rest } = persistedState
+          const merged = { ...rest, questions: [] as Question[] }
+          if (merged.settings && typeof merged.settings === 'object') {
+            merged.settings = {
+              ...merged.settings,
+              dailyGoal: typeof merged.settings.dailyGoal === 'number' ? merged.settings.dailyGoal : 10,
+              fontScale: merged.settings.fontScale ?? 'normal',
+              highContrast: !!merged.settings.highContrast,
+              analyticsConsent: !!merged.settings.analyticsConsent,
+            }
+          }
+          return merged
         }
         return persistedState
       },

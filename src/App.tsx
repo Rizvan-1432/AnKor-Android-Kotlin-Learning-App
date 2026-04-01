@@ -43,9 +43,13 @@ function App() {
     settings.theme === 'dark' ||
     (settings.theme === 'auto' && systemDark)
 
+  const fontSize =
+    settings.fontScale === 'large' ? 17 : settings.fontScale === 'xlarge' ? 19 : 15
+
   const theme = createTheme({
     palette: {
       mode: resolvedDark ? 'dark' : 'light',
+      contrastThreshold: settings.highContrast ? 4.5 : 3,
       primary: {
         main: resolvedDark ? '#60a5fa' : '#3b82f6',
       },
@@ -58,12 +62,14 @@ function App() {
       },
       text: {
         primary: resolvedDark ? '#ffffff' : '#000000',
-        secondary: resolvedDark ? '#d1d5db' : '#6b7280',
+        secondary: settings.highContrast
+          ? (resolvedDark ? '#e5e7eb' : '#374151')
+          : (resolvedDark ? '#d1d5db' : '#6b7280'),
       },
     },
     typography: {
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: 15,
+      fontSize,
     },
   })
 
@@ -117,6 +123,23 @@ function App() {
       document.body.style.colorScheme = 'light'
     }
   }, [resolvedDark, settings.backgroundGradient])
+
+  // Опциональная анонимная аналитика (Plausible), только при согласии и VITE_PLAUSIBLE_DOMAIN
+  useEffect(() => {
+    const domain = import.meta.env.VITE_PLAUSIBLE_DOMAIN as string | undefined
+    const existing = document.getElementById('plausible-script')
+    if (!settings.analyticsConsent || !domain) {
+      if (existing) existing.remove()
+      return
+    }
+    if (existing) return
+    const s = document.createElement('script')
+    s.id = 'plausible-script'
+    s.defer = true
+    s.setAttribute('data-domain', domain)
+    s.src = 'https://plausible.io/js/script.js'
+    document.head.appendChild(s)
+  }, [settings.analyticsConsent])
 
   return (
     <ThemeProvider theme={theme}>
