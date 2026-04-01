@@ -107,6 +107,22 @@ const rowToQuestion = r => ({
   answered: !!r.answered, createdAt: r.createdAt,
 })
 
+/** Офлайн-очередь может прислать частичный объект — better-sqlite3 требует все @имена */
+const normalizeQuestionForUpsert = q => ({
+  id: q.id,
+  question: q.question ?? '',
+  answer: q.answer ?? '',
+  detailedAnswer: q.detailedAnswer ?? null,
+  codeExample: q.codeExample ?? null,
+  level: q.level ?? 'junior',
+  category: q.category ?? 'android-sdk',
+  studied: q.studied ? 1 : 0,
+  correct: Number(q.correct) || 0,
+  incorrect: Number(q.incorrect) || 0,
+  answered: q.answered ? 1 : 0,
+  createdAt: q.createdAt ?? new Date().toISOString(),
+})
+
 // ─── Auth ───────────────────────────────────────────────────────────────
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body
@@ -189,7 +205,12 @@ app.post('/api/questions/sync', (req, res) => {
   if (!Array.isArray(qs)) return err(res, 'Invalid data')
   const upsert = db.prepare(`INSERT OR REPLACE INTO questions (id,question,answer,detailedAnswer,codeExample,level,category,studied,correct,incorrect,answered,createdAt)
     VALUES (@id,@question,@answer,@detailedAnswer,@codeExample,@level,@category,@studied,@correct,@incorrect,@answered,@createdAt)`)
-  db.transaction(arr => arr.forEach(q => upsert.run({ ...q, studied: q.studied ? 1 : 0, answered: q.answered ? 1 : 0 })))(qs)
+  db.transaction(arr =>
+    arr.forEach(q => {
+      if (!q || !q.id) return
+      upsert.run(normalizeQuestionForUpsert(q))
+    })
+  )(qs)
   db.prepare('UPDATE stats SET total = (SELECT COUNT(*) FROM questions) WHERE id = 1').run()
   const rows = db.prepare('SELECT * FROM questions ORDER BY createdAt DESC').all()
   ok(res, rows.map(rowToQuestion), 'Synced')
