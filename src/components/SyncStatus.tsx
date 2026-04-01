@@ -77,6 +77,19 @@ const SyncStatus: React.FC = () => {
             color={isOnline ? 'success' : 'default'}
             size="small"
             variant="outlined"
+            sx={{
+              bgcolor: isOnline ? 'rgba(76, 175, 80, 0.14)' : 'rgba(156, 163, 175, 0.14)',
+              borderColor: isOnline ? 'rgba(76, 175, 80, 0.14)' : 'rgba(156, 163, 175, 0.14)',
+              color: isOnline ? 'success.dark' : 'text.secondary',
+              '&.MuiChip-outlined': {
+                bgcolor: isOnline ? 'rgba(76, 175, 80, 0.14)' : 'rgba(156, 163, 175, 0.14)',
+              },
+              '& .MuiChip-icon': {
+                ml: 0.75,
+                mr: 0.35,
+                color: 'inherit',
+              },
+            }}
           />
         </Tooltip>
 

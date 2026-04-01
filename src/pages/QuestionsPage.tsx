@@ -126,6 +126,7 @@ const QuestionsPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 2,
+                  minHeight: { xs: 104, sm: 112 },
                   opacity: track.available ? 1 : 0.55,
                 }}
               >
@@ -142,6 +143,7 @@ const QuestionsPage: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
+                    lineHeight: 1,
                     fontSize: { xs: '1.5rem', sm: '1.8rem' },
                   }}
                 >
@@ -149,14 +151,14 @@ const QuestionsPage: React.FC = () => {
                 </Box>
 
                 {/* Текст */}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.3 }}>
+                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.4 }}>
                     <Typography
                       fontWeight="bold"
                       sx={{
                         fontSize: { xs: '0.95rem', sm: '1.1rem' },
                         color: track.available ? track.color : 'text.disabled',
-                        lineHeight: 1.2,
+                        lineHeight: 1.15,
                       }}
                     >
                       {track.name}
@@ -174,7 +176,7 @@ const QuestionsPage: React.FC = () => {
                     )}
                   </Box>
                   <Typography variant="caption" color="text.secondary"
-                    sx={{ fontSize: { xs: '0.72rem', sm: '0.8rem' }, lineHeight: 1.3, display: 'block' }}>
+                    sx={{ fontSize: { xs: '0.72rem', sm: '0.8rem' }, lineHeight: 1.15, mt: 0, display: 'block' }}>
                     {track.description}
                   </Typography>
                   {track.available && total > 0 && (

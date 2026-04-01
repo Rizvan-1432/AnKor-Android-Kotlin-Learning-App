@@ -177,6 +177,7 @@ const HomePage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1.5,
+                  minHeight: { xs: 98, sm: 108 },
                 }}
               >
                 <Box
@@ -191,13 +192,29 @@ const HomePage: React.FC = () => {
                     flexShrink: 0,
                   }}
                 >
-                  <Typography sx={{ fontSize: { xs: '1.1rem', sm: '1.3rem' } }}>{action.icon}</Typography>
+                  <Typography
+                    sx={{
+                      fontSize: { xs: '1.1rem', sm: '1.3rem' },
+                      lineHeight: 1,
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {action.icon}
+                  </Typography>
                 </Box>
-                <Box>
-                  <Typography fontWeight="bold" sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' }, lineHeight: 1.2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <Typography fontWeight="bold" sx={{ fontSize: { xs: '0.8rem', sm: '0.9rem' }, lineHeight: 1.15 }}>
                     {action.title}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.72rem' } }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontSize: { xs: '0.65rem', sm: '0.72rem' }, lineHeight: 1.15, mt: 0.35 }}
+                  >
                     {action.description}
                   </Typography>
                 </Box>
