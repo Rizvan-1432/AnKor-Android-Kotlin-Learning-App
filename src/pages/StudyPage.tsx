@@ -10,6 +10,9 @@ import CloseIcon from '@mui/icons-material/Close'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew'
 import { motion, AnimatePresence } from 'framer-motion'
+import Prism from 'prismjs'
+import 'prismjs/components/prism-kotlin'
+import 'prismjs/themes/prism-tomorrow.css'
 import { useAppStore } from '../store'
 import { Question, QuestionLevel } from '../types'
 
@@ -45,10 +48,15 @@ const LEVEL_NAMES: Record<QuestionLevel, string> = {
   lead: 'Lead', architect: 'Architect', expert: 'Expert',
 }
 
+const highlightCode = (code: string) => {
+  const grammar = Prism.languages.kotlin || Prism.languages.clike
+  return Prism.highlight(code, grammar, 'kotlin')
+}
+
 const StudyPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { questions, markCorrect, markIncorrect } = useAppStore()
+  const { questions, markCorrect, markIncorrect, loadQuestions } = useAppStore()
 
   const level = searchParams.get('level') as QuestionLevel
   const categoriesParam = searchParams.get('categories')
@@ -64,17 +72,41 @@ const StudyPage: React.FC = () => {
   const questionsPerPage = 5
 
   useEffect(() => {
-    if (level) {
-      setLevelQuestions(questions.filter(q => q.level === level))
+    let isMounted = true
+
+    const initQuestions = async () => {
+      if (!level && !categoriesParam) {
+        navigate('/questions')
+        return
+      }
+
+      // При прямом открытии /study после refresh store может быть пустым.
+      // Догружаем вопросы с API и только потом фильтруем.
+      if (questions.length === 0) {
+        setLoading(true)
+        await loadQuestions()
+        // После loadQuestions дожидаемся следующего прохода эффекта
+        // с актуальным массивом questions из store.
+        return
+      }
+
+      if (!isMounted) return
+
+      if (level) {
+        setLevelQuestions(questions.filter(q => q.level === level))
+      } else if (categoriesParam) {
+        const cats = categoriesParam.split(',')
+        setLevelQuestions(questions.filter(q => cats.includes(q.category)))
+      }
       setLoading(false)
-    } else if (categoriesParam) {
-      const cats = categoriesParam.split(',')
-      setLevelQuestions(questions.filter(q => cats.includes(q.category)))
-      setLoading(false)
-    } else {
-      navigate('/questions')
     }
-  }, [level, categoriesParam, questions, navigate])
+
+    void initQuestions()
+
+    return () => {
+      isMounted = false
+    }
+  }, [level, categoriesParam, questions, navigate, loadQuestions])
 
   // Синхронизируем modalQuestion с актуальными данными из store
   useEffect(() => {
@@ -128,8 +160,12 @@ const StudyPage: React.FC = () => {
             sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' }, lineHeight: 1.3 }}>
             {trackName ? `📚 ${trackName}` : `Изучение — ${LEVEL_NAMES[level] ?? level}`}
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.85rem' } }}>
-            {levelQuestions.length} вопросов • стр. {currentPage}/{totalPages}
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontSize: { xs: '0.74rem', sm: '0.88rem' }, fontWeight: 700, letterSpacing: '0.01em' }}
+          >
+            {levelQuestions.length} вопроса • страница {currentPage}/{totalPages}
           </Typography>
         </Box>
       </motion.div>
@@ -161,13 +197,24 @@ const StudyPage: React.FC = () => {
                     onClick={() => handleAnswer(question.id, true)}
                     disabled={question.answered}
                     sx={{ flex: 1, minWidth: 100, fontSize: { xs: '0.72rem', sm: '0.875rem' } }}>
-                    ✅ Знаю
+                    <Box component="span" sx={{ mr: 0.7, display: 'inline-flex' }}>✅</Box>
+                    Знаю
                   </Button>
-                  <Button variant="contained" color="error" size="small"
+                  <Button variant="contained" size="small"
                     onClick={() => handleAnswer(question.id, false)}
                     disabled={question.answered}
-                    sx={{ flex: 1, minWidth: 100, fontSize: { xs: '0.72rem', sm: '0.875rem' } }}>
-                    ❌ Не знаю
+                    sx={{
+                      flex: 1,
+                      minWidth: 100,
+                      fontSize: { xs: '0.72rem', sm: '0.875rem' },
+                      bgcolor: '#e11d48',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255,255,255,0.55)',
+                      boxShadow: '0 4px 12px rgba(225, 29, 72, 0.4)',
+                      '&:hover': { bgcolor: '#be123c', boxShadow: '0 6px 16px rgba(190, 18, 60, 0.5)' },
+                    }}>
+                    <Box component="span" sx={{ mr: 0.7, display: 'inline-flex', color: '#ffffff', fontWeight: 800 }}>✕</Box>
+                    Не знаю
                   </Button>
                   <Button variant="outlined" size="small"
                     onClick={() => setModalQuestion(question)}
@@ -206,6 +253,12 @@ const StudyPage: React.FC = () => {
             maxWidth="sm"
             fullWidth
             fullScreen={false}
+            sx={{ zIndex: (theme) => theme.zIndex.modal + 10 }}
+            BackdropProps={{
+              sx: {
+                backgroundColor: 'rgba(0, 0, 0, 0.68)',
+              }
+            }}
             PaperProps={{
               sx: {
                 borderRadius: 3,
@@ -246,12 +299,21 @@ const StudyPage: React.FC = () => {
             <DialogContent sx={{ p: 0, overflowY: 'auto' }}>
               {/* Краткий ответ */}
               <Box sx={{ p: { xs: 2, sm: 2.5 }, pb: 0 }}>
-                <Typography variant="overline" color="primary" sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>
-                  📝 Краткий ответ
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.5, lineHeight: 1.6 }}>
-                  {modalQuestion.answer}
-                </Typography>
+                <Box
+                  sx={{
+                    p: { xs: 1.5, sm: 1.75 },
+                    borderRadius: 2,
+                    border: '1px solid rgba(59,130,246,0.22)',
+                    background: 'linear-gradient(135deg, rgba(59,130,246,0.10) 0%, rgba(59,130,246,0.04) 100%)',
+                  }}
+                >
+                  <Typography variant="overline" color="primary" sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>
+                    📝 Краткий ответ
+                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5, lineHeight: 1.6 }}>
+                    {modalQuestion.answer}
+                  </Typography>
+                </Box>
               </Box>
 
               {/* Подробный ответ */}
@@ -266,9 +328,18 @@ const StudyPage: React.FC = () => {
                       </Typography>
                     </AccordionSummary>
                     <AccordionDetails sx={{ pt: 0 }}>
-                      <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                        {modalQuestion.detailedAnswer}
-                      </Typography>
+                      <Box
+                        sx={{
+                          p: { xs: 1.25, sm: 1.5 },
+                          borderRadius: 2,
+                          border: '1px solid rgba(16,185,129,0.22)',
+                          background: 'linear-gradient(135deg, rgba(16,185,129,0.10) 0%, rgba(16,185,129,0.04) 100%)',
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ lineHeight: 1.65 }}>
+                          {modalQuestion.detailedAnswer}
+                        </Typography>
+                      </Box>
                     </AccordionDetails>
                   </Accordion>
                 </>
@@ -279,7 +350,11 @@ const StudyPage: React.FC = () => {
                 <>
                   <Divider sx={{ mx: 2, my: 1 }} />
                   <Accordion disableGutters elevation={0}
-                    sx={{ px: { xs: 1, sm: 1.5 }, '&:before': { display: 'none' } }}>
+                    sx={{
+                      px: { xs: 1, sm: 1.5 },
+                      borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                      '&:before': { display: 'none' }
+                    }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36, py: 0 }}>
                       <Typography variant="overline" color="warning.main" sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>
                         💻 Пример кода
@@ -292,7 +367,12 @@ const StudyPage: React.FC = () => {
                         fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
                         fontSize: '0.78rem', lineHeight: 1.5,
                       }}>
-                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{modalQuestion.codeExample}</pre>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                          <code
+                            className="language-kotlin"
+                            dangerouslySetInnerHTML={{ __html: highlightCode(modalQuestion.codeExample) }}
+                          />
+                        </pre>
                       </Paper>
                     </AccordionDetails>
                   </Accordion>
@@ -313,12 +393,21 @@ const StudyPage: React.FC = () => {
                   <Button fullWidth variant="contained" color="success" size="small"
                     onClick={() => { handleAnswer(modalQuestion.id, true); setModalQuestion(null) }}
                     sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                    ✅ Знаю
+                    <Box component="span" sx={{ mr: 0.7, display: 'inline-flex' }}>✅</Box>
+                    Знаю
                   </Button>
-                  <Button fullWidth variant="contained" color="error" size="small"
+                  <Button fullWidth variant="contained" size="small"
                     onClick={() => { handleAnswer(modalQuestion.id, false); setModalQuestion(null) }}
-                    sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                    ❌ Не знаю
+                    sx={{
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      bgcolor: '#e11d48',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255,255,255,0.55)',
+                      boxShadow: '0 4px 12px rgba(225, 29, 72, 0.4)',
+                      '&:hover': { bgcolor: '#be123c', boxShadow: '0 6px 16px rgba(190, 18, 60, 0.5)' },
+                    }}>
+                    <Box component="span" sx={{ mr: 0.7, display: 'inline-flex', color: '#ffffff', fontWeight: 800 }}>✕</Box>
+                    Не знаю
                   </Button>
                 </>
               )}

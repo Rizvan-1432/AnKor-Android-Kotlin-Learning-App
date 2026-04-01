@@ -64,6 +64,7 @@ function App() {
     },
     typography: {
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontSize: 15,
     },
   })
 
