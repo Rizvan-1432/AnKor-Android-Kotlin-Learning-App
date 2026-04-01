@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['src/assets/icon-192.png', 'src/assets/icon-512.png'],
+      includeAssets: ['icon-192.svg', 'icon-512.svg'],
       manifest: {
         name: 'AnKor - Изучение Android и Kotlin',
         short_name: 'AnKor',
@@ -23,19 +23,19 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'src/assets/icon-192.png',
+            src: '/icon-192.svg',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/svg+xml'
           },
           {
-            src: 'src/assets/icon-512.png',
+            src: '/icon-512.svg',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/svg+xml'
           },
           {
-            src: 'src/assets/icon-512.png',
+            src: '/icon-512.svg',
             sizes: '512x512',
-            type: 'image/png',
+            type: 'image/svg+xml',
             purpose: 'any maskable'
           }
         ]
