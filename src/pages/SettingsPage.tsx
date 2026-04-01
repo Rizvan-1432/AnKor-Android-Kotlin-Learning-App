@@ -96,7 +96,7 @@ const SettingsPage: React.FC = () => {
           Настройки
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-          Управление настройками приложения и добавление вопросов
+          Управление настройками приложения
         </Typography>
       </motion.div>
 

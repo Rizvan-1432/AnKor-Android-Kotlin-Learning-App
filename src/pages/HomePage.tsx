@@ -42,13 +42,6 @@ const HomePage: React.FC = () => {
       color: theme.palette.primary.main
     },
     {
-      title: 'Управление вопросами',
-      description: 'Редактировать и удалять',
-      icon: '✏️',
-      path: '/manage-questions',
-      color: theme.palette.warning.main
-    },
-    {
       title: 'Статистика',
       description: 'Отслеживайте прогресс',
       icon: '📊',
@@ -61,6 +54,13 @@ const HomePage: React.FC = () => {
       icon: '🎯',
       path: '/goals',
       color: theme.palette.success.main
+    },
+    {
+      title: 'Настройки',
+      description: 'Тема, оформление, синхронизация',
+      icon: '⚙️',
+      path: '/settings',
+      color: theme.palette.info?.main ?? '#0ea5e9'
     }
   ]
 
@@ -158,7 +158,16 @@ const HomePage: React.FC = () => {
           Быстрые действия
         </Typography>
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'repeat(2, minmax(0, 1fr))',
+              xl: 'repeat(4, minmax(0, 1fr))',
+            },
+            gap: 1.5,
+          }}
+        >
           {quickActions.map((action, index) => (
             <motion.div
               key={index}

@@ -12,7 +12,6 @@ import StatsPage from './pages/StatsPage'
 import GoalsPage from './pages/GoalsPage'
 import SettingsPage from './pages/SettingsPage'
 import AnswerPage from './pages/AnswerPage'
-import ManageQuestionsPage from './pages/ManageQuestionsPage'
 import TrackPage from './pages/TrackPage'
 
 // Components
@@ -141,7 +140,6 @@ function App() {
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/goals" element={<GoalsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/manage-questions" element={<ManageQuestionsPage />} />
                 <Route path="/track/:trackId" element={<TrackPage />} />
               </Routes>
             </Box>

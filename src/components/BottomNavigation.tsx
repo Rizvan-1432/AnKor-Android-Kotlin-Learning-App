@@ -28,7 +28,7 @@ const BottomNavigation: React.FC = () => {
     if (path === '/') return 0
     
     // Страницы вопросов (включая изучение и направления)
-    if (path.startsWith('/questions') || path.startsWith('/study') || path.startsWith('/answer') || path.startsWith('/manage-questions') || path.startsWith('/track')) {
+    if (path.startsWith('/questions') || path.startsWith('/study') || path.startsWith('/answer') || path.startsWith('/track')) {
       return 1
     }
     
