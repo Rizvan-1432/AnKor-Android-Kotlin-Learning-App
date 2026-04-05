@@ -19,12 +19,14 @@ import { LEVEL_OPTIONS, CATEGORY_OPTIONS, LEVEL_COLORS, QuestionLevel, QuestionC
 const QuestionsPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { questions, loadQuestions, deleteQuestion, batchUpdateQuestions, loading, error } = useAdminStore()
+  const { questions, loadQuestions, deleteQuestion, batchUpdateQuestions, bulkDeleteQuestions, loading, error } = useAdminStore()
 
   const [search, setSearch] = useState('')
   const [filterLevel, setFilterLevel] = useState<QuestionLevel | ''>((searchParams.get('level') as QuestionLevel) || '')
   const [filterCategory, setFilterCategory] = useState<QuestionCategory | ''>((searchParams.get('category') as QuestionCategory) || '')
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [snackMsg, setSnackMsg] = useState('')
   const [selected, setSelected] = useState<string[]>([])
   const [batchMenu, setBatchMenu] = useState<null | 'level' | 'category'>(null)
@@ -41,11 +43,41 @@ const QuestionsPage: React.FC = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return
-    await deleteQuestion(deleteId)
-    setDeleteId(null)
-    setSnackMsg('Вопрос удалён')
-    setTimeout(() => setSnackMsg(''), 3000)
+    try {
+      await deleteQuestion(deleteId)
+      setDeleteId(null)
+      setSelected(s => s.filter(id => id !== deleteId))
+      setSnackMsg('Вопрос удалён')
+      setTimeout(() => setSnackMsg(''), 3000)
+    } catch {
+      setSnackMsg('Не удалось удалить вопрос')
+      setTimeout(() => setSnackMsg(''), 4000)
+    }
   }
+
+  const openBulkDeleteDialog = () => {
+    if (selected.length === 0) return
+    setBulkDeleteIds([...selected])
+  }
+
+  const handleBulkDelete = async () => {
+    if (!bulkDeleteIds?.length) return
+    setBulkDeleting(true)
+    try {
+      const n = await bulkDeleteQuestions(bulkDeleteIds)
+      setBulkDeleteIds(null)
+      setSelected([])
+      setSnackMsg(`Удалено вопросов: ${n}`)
+      setTimeout(() => setSnackMsg(''), 3000)
+    } catch {
+      setSnackMsg('Не удалось выполнить массовое удаление')
+      setTimeout(() => setSnackMsg(''), 4000)
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const questionToDelete = deleteId ? questions.find(q => q.id === deleteId) : undefined
 
   const getCategoryLabel = (cat: string) => CATEGORY_OPTIONS.find(c => c.value === cat)?.label ?? cat
 
@@ -124,6 +156,15 @@ const QuestionsPage: React.FC = () => {
                   }}
                 >
                   Категория
+                </Button>
+                <Button
+                  size="small"
+                  color="error"
+                  variant="contained"
+                  startIcon={<DeleteIcon />}
+                  onClick={openBulkDeleteDialog}
+                >
+                  Удалить выбранные
                 </Button>
                 <Button size="small" onClick={() => setSelected([])}>Снять выбор</Button>
               </Box>
@@ -259,15 +300,54 @@ const QuestionsPage: React.FC = () => {
         )}
       </motion.div>
 
-      {/* Диалог удаления */}
-      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)}>
+      {/* Диалог удаления одного */}
+      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Удалить вопрос?</DialogTitle>
         <DialogContent>
+          {questionToDelete && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.5 }}>
+              {questionToDelete.question.length > 220
+                ? `${questionToDelete.question.slice(0, 220)}…`
+                : questionToDelete.question}
+            </Typography>
+          )}
           <Alert severity="warning">Это действие нельзя отменить.</Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteId(null)}>Отмена</Button>
-          <Button onClick={handleDelete} color="error" variant="contained">Удалить</Button>
+          <Button onClick={handleDelete} color="error" variant="contained">
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог массового удаления */}
+      <Dialog open={bulkDeleteIds !== null} onClose={() => !bulkDeleting && setBulkDeleteIds(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Удалить выбранные вопросы?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Будет удалено записей: <strong>{bulkDeleteIds?.length ?? 0}</strong>
+          </Typography>
+          <Alert severity="warning">Это действие нельзя отменить.</Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkDeleteIds(null)} disabled={bulkDeleting}>Отмена</Button>
+          <Button
+            onClick={handleBulkDelete}
+            color="error"
+            variant="contained"
+            disabled={bulkDeleting}
+            startIcon={bulkDeleting ? undefined : <DeleteIcon />}
+          >
+            {bulkDeleting ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={18} color="inherit" />
+                Удаление…
+              </Box>
+            ) : (
+              'Удалить все'
+            )}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

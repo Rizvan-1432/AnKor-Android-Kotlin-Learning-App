@@ -87,7 +87,7 @@ function applyStudyModeAndLimit(
 const StudyPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { questions, markCorrect, markIncorrect, loadQuestions } = useAppStore()
+  const { questions, markCorrect, markIncorrect, loadQuestions, error: loadError } = useAppStore()
 
   const level = searchParams.get('level') as QuestionLevel
   const categoriesParam = searchParams.get('categories')
@@ -123,8 +123,19 @@ const StudyPage: React.FC = () => {
       if (questions.length === 0) {
         setLoading(true)
         await loadQuestions()
-        // После loadQuestions дожидаемся следующего прохода эффекта
-        // с актуальным массивом questions из store.
+        if (!isMounted) return
+        // Важно: при ошибке API questions остаётся [] и ссылка не меняется —
+        // эффект не перезапустится, если здесь не выставить loading и список.
+        const qs = useAppStore.getState().questions
+        let base: Question[] = []
+        if (level) {
+          base = qs.filter(q => q.level === level)
+        } else if (categoriesParam) {
+          const cats = categoriesParam.split(',')
+          base = qs.filter(q => cats.includes(q.category))
+        }
+        setLevelQuestions(applyStudyModeAndLimit(base, mode, sessionLimit))
+        setLoading(false)
         return
       }
 
@@ -210,12 +221,38 @@ const StudyPage: React.FC = () => {
   }
 
   if ((!level && !categoriesParam) || levelQuestions.length === 0) {
+    const showApiError = !!loadError && questions.length === 0
+    const catalogTotallyEmpty = questions.length === 0 && !showApiError
+    const emptyForFilter =
+      !catalogTotallyEmpty && !showApiError && levelQuestions.length === 0
+
+    let emptyMessage = ''
+    if (showApiError) {
+      emptyMessage = 'Каталог не загрузился — список карточек пуст.'
+    } else if (catalogTotallyEmpty) {
+      emptyMessage =
+        'В каталоге пока нет ни одного вопроса. Добавьте карточки в админ-панели или импортируйте данные — после этого обновите страницу.'
+    } else if (trackName) {
+      emptyMessage = `По теме «${trackName}» сейчас нет вопросов с учётом фильтров.`
+    } else if (categoriesParam) {
+      emptyMessage =
+        'Для выбранных категорий нет вопросов. Попробуйте другой трек или уровень.'
+    } else {
+      emptyMessage = `Для уровня «${LEVEL_NAMES[level] ?? level}» нет вопросов в каталоге.`
+    }
+
     return (
       <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          {trackName
-            ? `Вопросы по теме «${trackName}» не найдены`
-            : `Вопросы для уровня ${LEVEL_NAMES[level] ?? level} не найдены`}
+        {showApiError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {loadError}
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Проверьте, что запущен сервер API (например <code style={{ fontSize: '0.85em' }}>npm run server</code>) и что фронт ходит на него через прокси <code style={{ fontSize: '0.85em' }}>/api</code> в режиме разработки.
+            </Typography>
+          </Alert>
+        )}
+        <Alert severity={catalogTotallyEmpty || emptyForFilter ? 'info' : 'warning'} sx={{ mb: 3 }}>
+          {emptyMessage}
         </Alert>
         <Button variant="contained" onClick={() => navigate('/questions')}>
           Вернуться к выбору уровня

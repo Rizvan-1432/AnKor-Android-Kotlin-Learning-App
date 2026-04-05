@@ -14,6 +14,7 @@ interface AdminStore {
   updateQuestion: (id: string, q: Partial<Question>) => Promise<void>
   batchUpdateQuestions: (ids: string[], patch: Partial<Question>) => Promise<void>
   deleteQuestion: (id: string) => Promise<void>
+  bulkDeleteQuestions: (ids: string[]) => Promise<number>
   bulkCreate: (questions: Omit<Question, 'id' | 'createdAt' | 'studied' | 'correct' | 'incorrect'>[]) => Promise<number>
   clearError: () => void
 }
@@ -78,15 +79,29 @@ export const useAdminStore = create<AdminStore>((set, get) => ({
   },
 
   deleteQuestion: async (id) => {
-    set({ loading: true, error: null })
+    set({ error: null })
     try {
       await questionsApi.delete(id)
       set(state => ({
         questions: state.questions.filter(q => q.id !== id),
-        loading: false,
       }))
     } catch (e) {
-      set({ loading: false, error: e instanceof Error ? e.message : 'Ошибка удаления' })
+      set({ error: e instanceof Error ? e.message : 'Ошибка удаления' })
+      throw e
+    }
+  },
+
+  bulkDeleteQuestions: async (ids) => {
+    if (ids.length === 0) return 0
+    set({ loading: true, error: null })
+    try {
+      const res = await questionsApi.bulkDelete(ids)
+      const deleted = res.data?.deleted ?? 0
+      await get().loadQuestions()
+      set({ loading: false })
+      return deleted
+    } catch (e) {
+      set({ loading: false, error: e instanceof Error ? e.message : 'Ошибка массового удаления' })
       throw e
     }
   },

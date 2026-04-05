@@ -341,10 +341,15 @@ const useAppStore = create<AppState & AppActions>()(
                   answered: local.answered,
                 }
               })
+              // Пустой каталог: не подменять questions новым [], иначе меняется ссылка —
+              // эффекты (Study и др.) с зависимостью [questions] зацикливают loadQuestions().
+              const sameEmptyCatalog =
+                serverQuestions.length === 0 && state.questions.length === 0
               return {
-                questions: serverQuestions,
+                ...(sameEmptyCatalog ? {} : { questions: serverQuestions }),
                 loading: false,
-                lastSync: new Date().toISOString()
+                lastSync: new Date().toISOString(),
+                error: null,
               }
             })
           } else {

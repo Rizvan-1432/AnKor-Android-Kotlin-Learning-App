@@ -71,6 +71,12 @@ export const questionsApi = {
   delete: (id: string) =>
     request<{ success: boolean }>(`/questions/${id}`, { method: 'DELETE' }),
 
+  bulkDelete: (ids: string[]) =>
+    request<{ success: boolean; data: { deleted: number } }>('/questions/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+
   bulkCreate: (questions: Omit<Question, 'id' | 'createdAt' | 'studied' | 'correct' | 'incorrect'>[]) =>
     request<{ success: boolean; created: number }>('/questions/bulk', {
       method: 'POST',

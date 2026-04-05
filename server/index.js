@@ -193,6 +193,26 @@ app.delete('/api/questions/:id', authMiddleware, (req, res) => {
   ok(res, null, 'Deleted')
 })
 
+/** Массовое удаление (админ-панель): body { ids: string[] } */
+app.post('/api/questions/bulk-delete', authMiddleware, (req, res) => {
+  const { ids } = req.body
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return err(res, 'ids must be a non-empty array')
+  }
+  const del = db.prepare('DELETE FROM questions WHERE id = ?')
+  const run = db.transaction(arr => {
+    let n = 0
+    for (const id of arr) {
+      if (typeof id !== 'string' || !id.trim()) continue
+      n += del.run(id.trim()).changes
+    }
+    return n
+  })
+  const deleted = run(ids)
+  db.prepare('UPDATE stats SET total = (SELECT COUNT(*) FROM questions) WHERE id = 1').run()
+  ok(res, { deleted }, 'Bulk deleted')
+})
+
 // Bulk create (для импорта)
 app.post('/api/questions/bulk', authMiddleware, (req, res) => {
   const { questions } = req.body
