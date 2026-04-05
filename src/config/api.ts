@@ -1,9 +1,10 @@
 // API Configuration
 export const API_CONFIG = {
   // Базовый URL API:
-  // 1) VITE_API_URL (если задан в окружении)
+  // 1) VITE_API_URL — обязательно задайте в Vercel (Settings → Environment Variables)
+  //    на этапе сборки, иначе фронт ходит на дефолтный Render ниже, а админка может писать в другой API.
   // 2) Локальная разработка (DEV)
-  // 3) Продакшен сервер Render
+  // 3) Fallback, если VITE_API_URL не задан при build
   BASE_URL: import.meta.env.VITE_API_URL
     || (import.meta.env.DEV
       ? 'http://localhost:3000/api'

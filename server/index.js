@@ -84,20 +84,8 @@ db.exec(`
   INSERT OR IGNORE INTO settings (id) VALUES (1);
 `)
 
-// Seed если пусто
-const count = db.prepare('SELECT COUNT(*) as n FROM questions').get()
-if (count.n === 0) {
-  const insert = db.prepare(`INSERT INTO questions (id,question,answer,detailedAnswer,codeExample,level,category,studied,correct,incorrect,answered,createdAt) VALUES (?,?,?,?,?,?,?,0,0,0,0,?)`)
-  insert.run('1', 'Что такое Activity в Android?', 'Activity — это компонент Android, представляющий один экран с UI.',
-    'Activity является одним из основных компонентов Android-приложения. Каждая Activity представляет один экран с пользовательским интерфейсом.',
-    'class MainActivity : AppCompatActivity() {\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        setContentView(R.layout.activity_main)\n    }\n}',
-    'junior', 'android-sdk', new Date().toISOString())
-  insert.run('2', 'Что такое Fragment в Android?', 'Fragment — модульный компонент UI, который можно использовать в разных Activity.',
-    'Fragment представляет поведение или часть UI в Activity. Fragment имеет собственный жизненный цикл.',
-    'class MyFragment : Fragment() {\n    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {\n        return inflater.inflate(R.layout.fragment_my, container, false)\n    }\n}',
-    'junior', 'android-sdk', new Date().toISOString())
-  db.prepare('UPDATE stats SET total = 2 WHERE id = 1').run()
-}
+// Демо-вопросы при пустой БД не создаём — каталог только из админки / импорта.
+db.prepare('UPDATE stats SET total = (SELECT COUNT(*) FROM questions) WHERE id = 1').run()
 
 // ─── Middleware ─────────────────────────────────────────────────────────
 app.use(cors())
