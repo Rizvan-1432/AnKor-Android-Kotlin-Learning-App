@@ -11,7 +11,29 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ankor-admin-secret-2025'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
 
 // ─── SQLite ────────────────────────────────────────────────────────────
-const DB_PATH = path.join(__dirname, 'data.db')
+// По умолчанию: server/data.db (на Render и др. при каждом deploy диск сбрасывается — данные пропадают).
+// Прод: подключите постоянный диск и задайте одно из:
+//   DATABASE_PATH=/data/ankor.db  (полный путь к файлу)
+//   SQLITE_DATA_DIR=/data         (каталог, внутри будет data.db)
+function resolveDatabasePath() {
+  if (process.env.DATABASE_PATH && process.env.DATABASE_PATH.trim()) {
+    return path.resolve(process.env.DATABASE_PATH.trim())
+  }
+  if (process.env.SQLITE_DATA_DIR && process.env.SQLITE_DATA_DIR.trim()) {
+    return path.join(path.resolve(process.env.SQLITE_DATA_DIR.trim()), 'data.db')
+  }
+  return path.join(__dirname, 'data.db')
+}
+
+const DB_PATH = resolveDatabasePath()
+const dbDir = path.dirname(DB_PATH)
+try {
+  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true })
+} catch (e) {
+  console.error('SQLite: cannot create directory', dbDir, e.message)
+  process.exit(1)
+}
+
 const db = new Database(DB_PATH)
 
 db.exec(`
