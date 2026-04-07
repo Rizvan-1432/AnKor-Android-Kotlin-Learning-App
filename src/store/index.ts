@@ -31,7 +31,6 @@ const useAppStore = create<AppState & AppActions>()(
         dailyGoal: 10,
         fontScale: 'normal',
         highContrast: false,
-        analyticsConsent: false,
       },
       currentSession: undefined,
       achievements: [],
@@ -311,7 +310,6 @@ const useAppStore = create<AppState & AppActions>()(
             dailyGoal: 10,
             fontScale: 'normal',
             highContrast: false,
-            analyticsConsent: false,
           },
           currentSession: undefined,
           achievements: []
@@ -335,7 +333,7 @@ const useAppStore = create<AppState & AppActions>()(
                 return {
                   ...q,
                   studied: local.studied,
-                  studiedAt: local.studiedAt,
+                  studiedAt: local.studiedAt ?? q.studiedAt,
                   correct: local.correct,
                   incorrect: local.incorrect,
                   answered: local.answered,
@@ -480,10 +478,13 @@ const useAppStore = create<AppState & AppActions>()(
           )
         }))
 
-        // API запрос
+        const merged = get().questions.find((q) => q.id === id)
+        if (!merged) return
+
+        // PUT /questions/:id требует JWT (админка). Для прогресса с клиента — публичный sync.
         if (navigator.onLine) {
           try {
-            await apiService.updateQuestion(id, updates)
+            await apiService.syncQuestions([merged])
           } catch (error) {
             offlineManager.addAction({
               type: 'UPDATE_QUESTION',
@@ -532,19 +533,20 @@ const useAppStore = create<AppState & AppActions>()(
     },
     {
       name: 'ankor-storage',
-      version: 3,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       migrate: (persistedState: any) => {
         if (persistedState && typeof persistedState === 'object') {
           const { questions: _q, ...rest } = persistedState
           const merged = { ...rest, questions: [] as Question[] }
           if (merged.settings && typeof merged.settings === 'object') {
+            const { analyticsConsent: _removed, ...restSettings } = merged.settings as Record<string, unknown>
             merged.settings = {
-              ...merged.settings,
+              ...restSettings,
               dailyGoal: typeof merged.settings.dailyGoal === 'number' ? merged.settings.dailyGoal : 10,
               fontScale: merged.settings.fontScale ?? 'normal',
+              studyReminders: !!merged.settings.studyReminders,
               highContrast: !!merged.settings.highContrast,
-              analyticsConsent: !!merged.settings.analyticsConsent,
             }
           }
           return merged

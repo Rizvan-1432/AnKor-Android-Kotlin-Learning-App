@@ -49,7 +49,7 @@ npm run test:e2e     # Playwright (см. playwright.config.ts)
 
 **Контакты:**
 
-- GitHub: [@rizvanbakhaev](https://github.com/rizvanbakhaev)
+
 
 ---
 

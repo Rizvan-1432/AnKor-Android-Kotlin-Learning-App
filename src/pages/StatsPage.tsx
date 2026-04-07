@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   Container,
   Typography,
@@ -14,11 +14,49 @@ import {
   DialogContent,
   DialogActions,
   Snackbar,
-  useTheme
+  useTheme,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../store'
-import { QuestionLevel } from '../types'
+import { Question, QuestionLevel } from '../types'
+import { TRACKS } from './QuestionsPage'
+
+const emptyLevelStats = (): Record<
+  QuestionLevel,
+  { total: number; studied: number; correct: number }
+> => ({
+  junior: { total: 0, studied: 0, correct: 0 },
+  middle: { total: 0, studied: 0, correct: 0 },
+  senior: { total: 0, studied: 0, correct: 0 },
+  lead: { total: 0, studied: 0, correct: 0 },
+  architect: { total: 0, studied: 0, correct: 0 },
+  expert: { total: 0, studied: 0, correct: 0 },
+})
+
+/** Склонение: «1 вопрос», «2 вопроса», «5 вопросов», «21 вопрос» */
+function questionsWordPlural(n: number): string {
+  const n100 = n % 100
+  const n10 = n % 10
+  if (n10 === 1 && n100 !== 11) return 'вопрос'
+  if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return 'вопроса'
+  return 'вопросов'
+}
+
+const getLevelStatsForQuestions = (qs: Question[]) => {
+  const levelStats = emptyLevelStats()
+  qs.forEach((question) => {
+    levelStats[question.level].total++
+    if (question.studied) {
+      levelStats[question.level].studied++
+      levelStats[question.level].correct += question.correct
+    }
+  })
+  return levelStats
+}
 
 const StatsPage: React.FC = () => {
   const theme = useTheme()
@@ -26,26 +64,17 @@ const StatsPage: React.FC = () => {
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '' })
 
-  const getLevelStats = () => {
-    const levelStats: Record<QuestionLevel, { total: number; studied: number; correct: number }> = {
-      junior: { total: 0, studied: 0, correct: 0 },
-      middle: { total: 0, studied: 0, correct: 0 },
-      senior: { total: 0, studied: 0, correct: 0 },
-      lead: { total: 0, studied: 0, correct: 0 },
-      architect: { total: 0, studied: 0, correct: 0 },
-      expert: { total: 0, studied: 0, correct: 0 }
-    }
-
-    questions.forEach(question => {
-      levelStats[question.level].total++
-      if (question.studied) {
-        levelStats[question.level].studied++
-        levelStats[question.level].correct += question.correct
+  /** Прогресс по уровням отдельно по каждому направлению (Android, Frontend, …) */
+  const progressByTrack = useMemo(() => {
+    return TRACKS.filter((t) => t.available && t.categories.length > 0).map((track) => {
+      const qs = questions.filter((q) => track.categories.includes(q.category))
+      return {
+        track,
+        questions: qs,
+        levelStats: getLevelStatsForQuestions(qs),
       }
     })
-
-    return levelStats
-  }
+  }, [questions])
 
   const getCategoryStats = () => {
     const categoryStats: Record<string, number> = {}
@@ -59,7 +88,6 @@ const StatsPage: React.FC = () => {
       .slice(0, 5)
   }
 
-  const levelStats = getLevelStats()
   const categoryStats = getCategoryStats()
   const totalQuestions = questions.length
   const studiedQuestions = questions.filter(q => q.studied).length
@@ -214,38 +242,134 @@ const StatsPage: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   📊 Прогресс по уровням
                 </Typography>
-                {Object.entries(levelStats).map(([level, stats]) => (
-                  <Box key={level} sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="body1" fontWeight="bold">
-                        {getLevelName(level as QuestionLevel)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {stats.studied}/{stats.total}
-                      </Typography>
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={stats.total > 0 ? (stats.studied / stats.total) * 100 : 0}
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  По каждому направлению отдельно: ответы «Знаю» / «Не знаю» учитываются только в вопросах этого каталога.
+                </Typography>
+                {progressByTrack.map(({ track, questions: tq, levelStats }) => (
+                  <Accordion
+                    key={track.id}
+                    disableGutters
+                    elevation={0}
+                    sx={{
+                      mb: 1.5,
+                      border: (t) => `1px solid ${t.palette.divider}`,
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      '&:before': { display: 'none' },
+                      '&:last-of-type': { mb: 0 },
+                    }}
+                  >
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon sx={{ color: track.color }} />}
+                      aria-controls={`stats-track-${track.id}-content`}
+                      id={`stats-track-${track.id}-header`}
                       sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: 'rgba(0,0,0,0.1)',
-                        '& .MuiLinearProgress-bar': {
-                          backgroundColor: getLevelColor(level as QuestionLevel),
-                          borderRadius: 4
-                        }
+                        minHeight: 52,
+                        px: 1.5,
+                        '& .MuiAccordionSummary-content': {
+                          alignItems: 'center',
+                          my: 1,
+                          width: '100%',
+                          marginRight: 1,
+                          overflow: 'hidden',
+                        },
                       }}
-                    />
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Правильных: {stats.correct}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {stats.total > 0 ? Math.round((stats.studied / stats.total) * 100) : 0}% изучено
-                      </Typography>
-                    </Box>
-                  </Box>
+                    >
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(0, 1fr) auto',
+                          alignItems: 'center',
+                          columnGap: { xs: 1, sm: 1.5 },
+                          width: '100%',
+                          pr: 0.5,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            minWidth: 0,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <Typography sx={{ fontSize: '1.25rem', lineHeight: 1, flexShrink: 0 }}>
+                            {track.icon}
+                          </Typography>
+                          <Typography
+                            variant="subtitle1"
+                            fontWeight="bold"
+                            noWrap
+                            title={track.name}
+                            sx={{
+                              color: track.color,
+                              fontSize: { xs: '0.9rem', sm: '1rem' },
+                              lineHeight: 1.25,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {track.name}
+                          </Typography>
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                            justifySelf: 'end',
+                            textAlign: 'right',
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          }}
+                        >
+                          {tq.length} {questionsWordPlural(tq.length)}
+                        </Typography>
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 0, px: 2, pb: 2 }}>
+                      {tq.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          Нет вопросов этого направления в каталоге.
+                        </Typography>
+                      ) : (
+                        Object.entries(levelStats).map(([level, stats]) => (
+                          <Box key={`${track.id}-${level}`} sx={{ mb: 2.5, '&:last-child': { mb: 0 } }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="body2" fontWeight="bold">
+                                {getLevelName(level as QuestionLevel)}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {stats.studied}/{stats.total}
+                              </Typography>
+                            </Box>
+                            <LinearProgress
+                              variant="determinate"
+                              value={stats.total > 0 ? (stats.studied / stats.total) * 100 : 0}
+                              sx={{
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: getLevelColor(level as QuestionLevel),
+                                  borderRadius: 4,
+                                },
+                              }}
+                            />
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Правильных ответов: {stats.correct}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {stats.total > 0 ? Math.round((stats.studied / stats.total) * 100) : 0}% изучено
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))
+                      )}
+                    </AccordionDetails>
+                  </Accordion>
                 ))}
               </CardContent>
             </Card>
@@ -259,27 +383,41 @@ const StatsPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
           >
-            <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%' }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  🏷️ Популярные категории
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  {categoryStats.map(([category, count]) => (
-                    <Box key={category} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Chip
-                        label={category}
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                      />
-                      <Typography variant="body2" fontWeight="bold">
-                        {count}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </CardContent>
+            <Card sx={{ borderRadius: 3, boxShadow: 3, height: '100%', overflow: 'hidden' }}>
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{
+                  '&:before': { display: 'none' },
+                  background: 'transparent',
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  aria-controls="stats-categories-content"
+                  id="stats-categories-header"
+                  sx={{ px: 3, pt: 2.5, pb: 1, minHeight: 48 }}
+                >
+                  <Typography variant="h6">🏷️ Популярные категории</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 3, pb: 3, pt: 0 }}>
+                  <Box>
+                    {categoryStats.map(([category, count]) => (
+                      <Box key={category} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Chip
+                          label={category}
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                        />
+                        <Typography variant="body2" fontWeight="bold">
+                          {count}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
             </Card>
           </motion.div>
         </Grid>

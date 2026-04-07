@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Container, Typography, Box, Card, CardContent, Button,
@@ -12,9 +12,15 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew'
 import { motion, AnimatePresence } from 'framer-motion'
 import Prism from 'prismjs'
 import 'prismjs/components/prism-kotlin'
+import 'prismjs/components/prism-markup'
+import 'prismjs/components/prism-css'
+import 'prismjs/components/prism-javascript'
+import 'prismjs/components/prism-typescript'
+import 'prismjs/components/prism-jsx'
+import 'prismjs/components/prism-tsx'
 import 'prismjs/themes/prism-tomorrow.css'
 import { useAppStore } from '../store'
-import { Question, QuestionLevel } from '../types'
+import { Question, QuestionCategory, QuestionLevel } from '../types'
 
 const CATEGORY_LABELS: Record<string, string> = {
   'kotlin':                'Kotlin',
@@ -33,6 +39,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   'system':                'Системные',
   'behavioral':            'Поведенческие',
   'publishing':            'Публикация',
+  'html':                  'HTML',
+  'css':                   'CSS',
+  'html-css':              'HTML/CSS',
+  'javascript':            'JavaScript',
+  'typescript':            'TypeScript',
+  'react':                 'React',
+  'state-management':      'State Management',
+  'build-tools':           'Build Tools',
+  'web-performance':       'Web Performance',
+  'web-security':          'Web Security',
+  'browser-api':           'Browser API',
+  'web-testing':           'Web Testing',
 }
 
 const LEVEL_COLORS: Record<QuestionLevel, string> = {
@@ -48,9 +66,20 @@ const LEVEL_NAMES: Record<QuestionLevel, string> = {
   lead: 'Lead', architect: 'Architect', expert: 'Expert',
 }
 
-const highlightCode = (code: string) => {
-  const grammar = Prism.languages.kotlin || Prism.languages.clike
-  return Prism.highlight(code, grammar, 'kotlin')
+const CATEGORY_LANGUAGE_MAP: Partial<Record<QuestionCategory, string>> = {
+  html: 'markup',
+  'html-css': 'markup',
+  css: 'css',
+  javascript: 'javascript',
+  typescript: 'typescript',
+  react: 'tsx',
+  'web-testing': 'javascript',
+}
+
+const highlightCode = (code: string, category?: QuestionCategory) => {
+  const language = (category && CATEGORY_LANGUAGE_MAP[category]) || 'kotlin'
+  const grammar = Prism.languages[language] || Prism.languages.kotlin || Prism.languages.clike
+  return Prism.highlight(code, grammar, language)
 }
 
 /** Режимы: ошибки, слабые темы, интервальное повторение; лимит карточек за сессию */
@@ -101,7 +130,6 @@ const StudyPage: React.FC = () => {
   })()
 
   const [currentPage, setCurrentPage] = useState(1)
-  const [levelQuestions, setLevelQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
 
   // Модальное окно ответа
@@ -109,55 +137,28 @@ const StudyPage: React.FC = () => {
 
   const questionsPerPage = 5
 
+  /** Всегда из актуального store — иначе после «Знаю»/«Не знаю» показывались устаревшие счётчики на всех карточках */
+  const levelQuestions = useMemo(() => {
+    if (!level && !categoriesParam) return []
+    const cats = categoriesParam ? categoriesParam.split(',').filter(Boolean) : null
+    let base: Question[] = questions
+    if (level) base = base.filter((q) => q.level === level)
+    if (cats && cats.length > 0) base = base.filter((q) => cats.includes(q.category))
+    return applyStudyModeAndLimit(base, mode, sessionLimit)
+  }, [questions, level, categoriesParam, mode, sessionLimit])
+
   useEffect(() => {
-    let isMounted = true
-
-    const initQuestions = async () => {
-      if (!level && !categoriesParam) {
-        navigate('/questions')
-        return
-      }
-
-      // При прямом открытии /study после refresh store может быть пустым.
-      // Догружаем вопросы с API и только потом фильтруем.
-      if (questions.length === 0) {
-        setLoading(true)
-        await loadQuestions()
-        if (!isMounted) return
-        // Важно: при ошибке API questions остаётся [] и ссылка не меняется —
-        // эффект не перезапустится, если здесь не выставить loading и список.
-        const qs = useAppStore.getState().questions
-        let base: Question[] = []
-        if (level) {
-          base = qs.filter(q => q.level === level)
-        } else if (categoriesParam) {
-          const cats = categoriesParam.split(',')
-          base = qs.filter(q => cats.includes(q.category))
-        }
-        setLevelQuestions(applyStudyModeAndLimit(base, mode, sessionLimit))
-        setLoading(false)
-        return
-      }
-
-      if (!isMounted) return
-
-      let base: Question[] = []
-      if (level) {
-        base = questions.filter(q => q.level === level)
-      } else if (categoriesParam) {
-        const cats = categoriesParam.split(',')
-        base = questions.filter(q => cats.includes(q.category))
-      }
-      setLevelQuestions(applyStudyModeAndLimit(base, mode, sessionLimit))
+    if (!level && !categoriesParam) {
+      navigate('/questions')
+      return
+    }
+    if (questions.length === 0) {
+      setLoading(true)
+      void loadQuestions().finally(() => setLoading(false))
+    } else {
       setLoading(false)
     }
-
-    void initQuestions()
-
-    return () => {
-      isMounted = false
-    }
-  }, [level, categoriesParam, questions, navigate, loadQuestions, mode, sessionLimit])
+  }, [level, categoriesParam, questions.length, navigate, loadQuestions])
 
   // Синхронизируем modalQuestion с актуальными данными из store
   useEffect(() => {
@@ -293,7 +294,7 @@ const StudyPage: React.FC = () => {
           <motion.div key={question.id}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.08, duration: 0.4 }}>
-            <Card sx={{ mb: 2.5, borderRadius: 3, boxShadow: 2, border: `1px solid ${accentColor}22` }}>
+            <Card sx={{ mb: 2.5, borderRadius: 1, boxShadow: 2, border: `1px solid ${accentColor}22` }}>
               <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
                 {/* Метки */}
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
@@ -378,7 +379,7 @@ const StudyPage: React.FC = () => {
             }}
             PaperProps={{
               sx: {
-                borderRadius: 3,
+                borderRadius: 1,
                 mx: { xs: 1.5, sm: 3 },
                 maxHeight: '90vh',
               }
@@ -419,7 +420,7 @@ const StudyPage: React.FC = () => {
                 <Box
                   sx={{
                     p: { xs: 1.5, sm: 1.75 },
-                    borderRadius: 2,
+                    borderRadius: 1,
                     border: '1px solid rgba(59,130,246,0.22)',
                     background: 'linear-gradient(135deg, rgba(59,130,246,0.10) 0%, rgba(59,130,246,0.04) 100%)',
                   }}
@@ -448,7 +449,7 @@ const StudyPage: React.FC = () => {
                       <Box
                         sx={{
                           p: { xs: 1.25, sm: 1.5 },
-                          borderRadius: 2,
+                          borderRadius: 1,
                           border: '1px solid rgba(16,185,129,0.22)',
                           background: 'linear-gradient(135deg, rgba(16,185,129,0.10) 0%, rgba(16,185,129,0.04) 100%)',
                         }}
@@ -480,14 +481,14 @@ const StudyPage: React.FC = () => {
                     <AccordionDetails sx={{ pt: 0 }}>
                       <Paper sx={{
                         p: 1.5, bgcolor: '#1e1e1e', color: '#d4d4d4',
-                        borderRadius: 2, overflow: 'auto',
+                        borderRadius: 1, overflow: 'auto',
                         fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
                         fontSize: '0.78rem', lineHeight: 1.5,
                       }}>
                         <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
                           <code
                             className="language-kotlin"
-                            dangerouslySetInnerHTML={{ __html: highlightCode(modalQuestion.codeExample) }}
+                            dangerouslySetInnerHTML={{ __html: highlightCode(modalQuestion.codeExample, modalQuestion.category) }}
                           />
                         </pre>
                       </Paper>
@@ -563,7 +564,7 @@ const StudyPage: React.FC = () => {
               letterSpacing: '0.03em',
               px: 4,
               py: 1.2,
-              borderRadius: '50px',
+              borderRadius: 2,
               boxShadow: `0 6px 24px ${accentColor}55, 0 2px 8px rgba(0,0,0,0.2)`,
               border: '1.5px solid rgba(255,255,255,0.25)',
               textTransform: 'none',

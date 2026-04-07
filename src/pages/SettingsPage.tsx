@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Container,
   Typography,
@@ -20,11 +20,16 @@ import {
   Divider,
   Paper,
   Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { alpha, useTheme } from '@mui/material/styles'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../store'
 import { QuestionLevel, FontScale } from '../types'
+import { TRACKS } from './QuestionsPage'
 
 const DARK_ONLY_GRADIENTS = ['black', 'dark-blue', 'dark-gray']
 
@@ -142,22 +147,32 @@ const SettingsPage: React.FC = () => {
     updateSettings({ ...settings, backgroundGradient: event.target.value as typeof settings.backgroundGradient })
   }
 
-  const getLevelStats = () => {
-    const stats: Record<QuestionLevel, number> = {
-      junior: 0,
-      middle: 0,
-      senior: 0,
-      lead: 0,
-      architect: 0,
-      expert: 0,
-    }
-    questions.forEach(q => {
-      stats[q.level]++
-    })
-    return stats
-  }
+  const emptyLevels = (): Record<QuestionLevel, number> => ({
+    junior: 0,
+    middle: 0,
+    senior: 0,
+    lead: 0,
+    architect: 0,
+    expert: 0,
+  })
 
-  const levelStats = getLevelStats()
+  /** По каждому направлению отдельно (как на экране «Направления») */
+  const catalogByTrack = useMemo(() => {
+    return TRACKS.filter((t) => t.available && t.categories.length > 0).map((track) => {
+      const qs = questions.filter((q) => track.categories.includes(q.category))
+      const levelStats = emptyLevels()
+      qs.forEach((q) => {
+        levelStats[q.level]++
+      })
+      return { track, levelStats, total: qs.length }
+    })
+  }, [questions])
+
+  const orphanQuestions = useMemo(() => {
+    const inTrack = new Set<string>()
+    TRACKS.forEach((t) => t.categories.forEach((c) => inTrack.add(c)))
+    return questions.filter((q) => !inTrack.has(q.category))
+  }, [questions])
 
   return (
     <Container maxWidth="md" sx={{ py: { xs: 2.5, sm: 4 }, pb: { xs: 10, sm: 6 } }}>
@@ -317,34 +332,6 @@ const SettingsPage: React.FC = () => {
                 sx={{ m: 0, width: '100%', justifyContent: 'space-between' }}
               />
             </Paper>
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                borderColor: alpha(theme.palette.divider, 0.5),
-                bgcolor: alpha(theme.palette.action.hover, 0.35),
-              }}
-            >
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={!!settings.analyticsConsent}
-                    onChange={e => updateSettings({ analyticsConsent: e.target.checked })}
-                    color="primary"
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant="body2">Анонимная аналитика</Typography>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      Plausible, если задан VITE_PLAUSIBLE_DOMAIN
-                    </Typography>
-                  </Box>
-                }
-                sx={{ m: 0, alignItems: 'flex-start', width: '100%' }}
-              />
-            </Paper>
           </Stack>
         </SettingsSectionCard>
 
@@ -360,13 +347,13 @@ const SettingsPage: React.FC = () => {
           >
             <FormControlLabel
               control={
-                <Switch checked={settings.studyReminders} onChange={handleReminderChange} color="primary" />
+                <Switch checked={!!settings.studyReminders} onChange={handleReminderChange} color="primary" />
               }
               label={<Typography variant="body2">Напоминания об изучении</Typography>}
               sx={{ m: 0, width: '100%', justifyContent: 'space-between' }}
             />
           </Paper>
-          {settings.studyReminders && (
+          {!!settings.studyReminders && (
             <TextField
               type="time"
               label="Время"
@@ -380,30 +367,82 @@ const SettingsPage: React.FC = () => {
           )}
         </SettingsSectionCard>
 
-        <SettingsSectionCard icon="📊" title="Каталог" subtitle="Распределение вопросов по уровням" delay={0.18}>
-          <Grid container spacing={1.25}>
-            {(Object.entries(levelStats) as [QuestionLevel, number][]).map(([level, count]) => (
-              <Grid item xs={6} sm={4} key={level}>
-                <Box
+        <SettingsSectionCard
+          icon="📊"
+          title="Каталог"
+          subtitle="Распределение по направлениям (Android, Frontend…) и уровням"
+          delay={0.18}
+        >
+          <Stack spacing={0.5}>
+            {catalogByTrack.map(({ track, levelStats, total }) => (
+              <Accordion
+                key={track.id}
+                defaultExpanded={false}
+                disableGutters
+                elevation={0}
+                sx={{
+                  bgcolor: 'transparent',
+                  '&:before': { display: 'none' },
+                  borderRadius: 2,
+                  '&.Mui-expanded': { m: 0 },
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon sx={{ color: 'text.secondary' }} />}
                   sx={{
-                    p: 1.5,
-                    borderRadius: 2,
-                    background: `linear-gradient(135deg, ${alpha(LEVEL_COLORS[level], 0.22)} 0%, ${alpha(LEVEL_COLORS[level], 0.06)} 100%)`,
-                    border: `1px solid ${alpha(LEVEL_COLORS[level], 0.35)}`,
+                    px: 0,
+                    minHeight: 44,
+                    '& .MuiAccordionSummary-content': { my: 0.5, alignItems: 'center', flexWrap: 'wrap', gap: 0.5 },
                   }}
                 >
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'capitalize', fontSize: '0.65rem' }}>
-                    {level}
+                  <Typography component="span" sx={{ fontSize: '1.1rem' }}>
+                    {track.icon}
                   </Typography>
-                  <Typography variant="h6" fontWeight={800} sx={{ color: LEVEL_COLORS[level], mt: 0.25 }}>
-                    {count}
+                  <Typography variant="subtitle2" fontWeight={800} sx={{ color: track.color }}>
+                    {track.name}
                   </Typography>
-                </Box>
-              </Grid>
+                  <Typography variant="caption" color="text.secondary">
+                    · {total}{' '}
+                    {total === 1 ? 'вопрос' : total >= 2 && total <= 4 ? 'вопроса' : 'вопросов'}
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 0, pt: 0, pb: 1.5 }}>
+                  <Grid container spacing={1.25}>
+                    {(Object.entries(levelStats) as [QuestionLevel, number][]).map(([level, count]) => (
+                      <Grid item xs={6} sm={4} key={`${track.id}-${level}`}>
+                        <Box
+                          sx={{
+                            p: 1.5,
+                            borderRadius: 2,
+                            background: `linear-gradient(135deg, ${alpha(LEVEL_COLORS[level], 0.22)} 0%, ${alpha(LEVEL_COLORS[level], 0.06)} 100%)`,
+                            border: `1px solid ${alpha(LEVEL_COLORS[level], 0.35)}`,
+                          }}
+                        >
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ fontWeight: 600, textTransform: 'capitalize', fontSize: '0.65rem' }}
+                          >
+                            {level}
+                          </Typography>
+                          <Typography variant="h6" fontWeight={800} sx={{ color: LEVEL_COLORS[level], mt: 0.25 }}>
+                            {count}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
             ))}
-          </Grid>
+          </Stack>
+          {orphanQuestions.length > 0 && (
+            <Typography variant="caption" color="warning.main" sx={{ mt: 2, display: 'block' }}>
+              Вне направлений ({orphanQuestions.length}): категории не привязаны к треку — проверьте данные в админке.
+            </Typography>
+          )}
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center', fontWeight: 500 }}>
-            Всего вопросов: <strong>{questions.length}</strong>
+            Всего в каталоге: <strong>{questions.length}</strong>
           </Typography>
         </SettingsSectionCard>
       </Stack>

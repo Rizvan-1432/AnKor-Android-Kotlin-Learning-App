@@ -1,0 +1,42 @@
+[
+  {
+    "question": "Для чего нужны семантические теги HTML?",
+    "answer": "Семантические теги описывают структуру страницы и улучшают доступность/SEO.",
+    "detailedAnswer": "Теги вроде header, main, section, article помогают скринридерам и поисковым системам лучше понимать контент.",
+    "codeExample": "<main><article><h1>Заголовок</h1></article></main>",
+    "level": "junior",
+    "category": "html"
+  },
+  {
+    "question": "Что такое CSS Box Model?",
+    "answer": "Модель блока: content, padding, border, margin.",
+    "detailedAnswer": "Размер элемента в layout складывается из контента, внутренних отступов, границ и внешних отступов.",
+    "codeExample": ".card { width: 300px; padding: 16px; border: 1px solid #ddd; margin: 12px; }",
+    "level": "junior",
+    "category": "css"
+  },
+  {
+    "question": "Что такое hoisting в JavaScript?",
+    "answer": "Поднятие деклараций на этап компиляции до выполнения кода.",
+    "detailedAnswer": "Function declarations доступны до строки объявления, а let/const находятся во временной мертвой зоне до инициализации.",
+    "codeExample": "console.log(a); var a = 1;",
+    "level": "junior",
+    "category": "javascript"
+  },
+  {
+    "question": "Зачем в React нужен key в списках?",
+    "answer": "key помогает React корректно сопоставлять элементы между рендерами.",
+    "detailedAnswer": "Стабильный key минимизирует лишние перерисовки и предотвращает баги со state внутри элементов списка.",
+    "codeExample": "{items.map(item => <li key={item.id}>{item.title}</li>)}",
+    "level": "junior",
+    "category": "react"
+  },
+  {
+    "question": "Что делает useState?",
+    "answer": "Добавляет локальное состояние в функциональный компонент.",
+    "detailedAnswer": "Хук useState возвращает текущее значение и функцию для обновления, что запускает повторный рендер.",
+    "codeExample": "const [count, setCount] = useState(0)",
+    "level": "junior",
+    "category": "react"
+  }
+]

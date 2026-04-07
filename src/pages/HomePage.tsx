@@ -59,8 +59,8 @@ const HomePage: React.FC = () => {
 
   const quickActions = [
     {
-      title: 'Выбрать уровень',
-      description: 'Junior, Middle, Senior и другие',
+      title: 'Направления',
+      description: 'Специализация (Android, Frontend…) и уровень Junior, Middle…',
       icon: '📋',
       path: '/questions',
       color: theme.palette.primary.main
@@ -256,7 +256,7 @@ const HomePage: React.FC = () => {
               <CardActionArea
                 onClick={() => navigate(action.path)}
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 1,
                   overflow: 'hidden',
                   background: `linear-gradient(135deg, ${action.color}22 0%, ${action.color}11 100%)`,
                   border: `1px solid ${action.color}44`,
@@ -271,7 +271,7 @@ const HomePage: React.FC = () => {
                   sx={{
                     width: { xs: 38, sm: 44 },
                     height: { xs: 38, sm: 44 },
-                    borderRadius: 2,
+                    borderRadius: 1,
                     background: `linear-gradient(135deg, ${action.color} 0%, ${action.color}BB 100%)`,
                     display: 'flex',
                     alignItems: 'center',

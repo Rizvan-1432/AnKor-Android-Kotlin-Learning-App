@@ -146,7 +146,7 @@ const AnswerPage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.6 }}
       >
-        <Card sx={{ mb: 3, borderRadius: 3, boxShadow: 3 }}>
+        <Card sx={{ mb: 3, borderRadius: 1, boxShadow: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
               {question.question}
@@ -162,7 +162,7 @@ const AnswerPage: React.FC = () => {
         transition={{ delay: 0.4, duration: 0.6 }}
       >
         {/* Краткий ответ */}
-        <Accordion defaultExpanded sx={{ mb: 2, borderRadius: 2 }}>
+        <Accordion defaultExpanded sx={{ mb: 2, borderRadius: 1 }}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography variant="h6" color="primary" fontWeight="bold">
               📝 Краткий ответ
@@ -177,7 +177,7 @@ const AnswerPage: React.FC = () => {
 
         {/* Расширенный ответ */}
         {question.detailedAnswer && (
-          <Accordion sx={{ mb: 2, borderRadius: 2 }}>
+          <Accordion sx={{ mb: 2, borderRadius: 1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6" color="success.main" fontWeight="bold">
                 📚 Расширенный ответ
@@ -193,7 +193,7 @@ const AnswerPage: React.FC = () => {
 
         {/* Код с комментариями */}
         {question.codeExample && (
-          <Accordion sx={{ mb: 3, borderRadius: 2 }}>
+          <Accordion sx={{ mb: 3, borderRadius: 1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6" color="warning.main" fontWeight="bold">
                 💻 Код с комментариями
@@ -205,7 +205,7 @@ const AnswerPage: React.FC = () => {
                   p: 2,
                   backgroundColor: '#1e1e1e',
                   color: '#d4d4d4',
-                  borderRadius: 2,
+                  borderRadius: 1,
                   overflow: 'auto',
                   fontFamily: 'Monaco, Menlo, Ubuntu Mono, monospace',
                   fontSize: '0.9rem',
@@ -227,7 +227,7 @@ const AnswerPage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.6 }}
       >
-        <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+        <Card sx={{ borderRadius: 1, boxShadow: 3 }}>
           <CardContent sx={{ p: 3, textAlign: 'center' }}>
             <Typography variant="h6" gutterBottom>
               Как вы оцениваете свой ответ?

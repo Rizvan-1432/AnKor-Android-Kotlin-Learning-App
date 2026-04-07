@@ -19,7 +19,9 @@ const LEVELS: { id: QuestionLevel; name: string; icon: string; color: string; de
   { id: 'expert',    name: 'Expert',    icon: '🎯', color: '#6366f1', description: 'Экспертные паттерны' },
 ]
 
-const TOPICS: { id: string; name: string; icon: string; color: string; categories: QuestionCategory[] }[] = [
+type TrackTopic = { id: string; name: string; icon: string; color: string; categories: QuestionCategory[] }
+
+const ANDROID_TOPICS: TrackTopic[] = [
   { id: 'sdk',      name: 'Android SDK',       icon: '📱', color: '#3b82f6', categories: ['android-sdk', 'ui-ux'] },
   { id: 'kotlin',   name: 'Kotlin & Coroutines',icon: '🟠', color: '#f59e0b', categories: ['kotlin', 'multithreading'] },
   { id: 'jetpack',  name: 'Jetpack',            icon: '🚀', color: '#8b5cf6', categories: ['jetpack'] },
@@ -29,6 +31,24 @@ const TOPICS: { id: string; name: string; icon: string; color: string; categorie
   { id: 'devops',   name: 'CI/CD и публикация', icon: '📦', color: '#64748b', categories: ['ci-cd', 'publishing'] },
   { id: 'career',   name: 'Карьера',            icon: '💼', color: '#0ea5e9', categories: ['system', 'behavioral'] },
 ]
+
+const FRONTEND_TOPICS: TrackTopic[] = [
+  { id: 'html',       name: 'HTML',                 icon: '🧱', color: '#f97316', categories: ['html'] },
+  { id: 'css',        name: 'CSS',                  icon: '🎨', color: '#0ea5e9', categories: ['css'] },
+  { id: 'markup-legacy', name: 'HTML/CSS (legacy)', icon: '🗂️', color: '#94a3b8', categories: ['html-css'] },
+  { id: 'js',         name: 'JavaScript',           icon: '🟨', color: '#f59e0b', categories: ['javascript', 'browser-api'] },
+  { id: 'ts',         name: 'TypeScript',           icon: '🔷', color: '#2563eb', categories: ['typescript'] },
+  { id: 'react',      name: 'React',                icon: '⚛️', color: '#06b6d4', categories: ['react', 'state-management'] },
+  { id: 'tooling',    name: 'Инструменты сборки',   icon: '🛠️', color: '#6366f1', categories: ['build-tools'] },
+  { id: 'quality',    name: 'Тестирование (web)',   icon: '✅', color: '#10b981', categories: ['web-testing'] },
+  { id: 'perf',       name: 'Performance',          icon: '⚡', color: '#eab308', categories: ['web-performance'] },
+  { id: 'security',   name: 'Web Security',         icon: '🔒', color: '#ef4444', categories: ['web-security'] },
+]
+
+const TOPICS_BY_TRACK: Record<string, TrackTopic[]> = {
+  android: ANDROID_TOPICS,
+  frontend: FRONTEND_TOPICS,
+}
 
 const TrackPage: React.FC = () => {
   const { trackId } = useParams<{ trackId: string }>()
@@ -48,15 +68,17 @@ const TrackPage: React.FC = () => {
       ),
     [searchNorm]
   )
+  const trackTopics = TOPICS_BY_TRACK[trackId ?? ''] ?? []
+
   const topicsFiltered = useMemo(
     () =>
-      TOPICS.filter(
+      trackTopics.filter(
         t =>
           !searchNorm ||
           t.name.toLowerCase().includes(searchNorm) ||
           t.categories.some(c => c.toLowerCase().includes(searchNorm))
       ),
-    [searchNorm]
+    [searchNorm, trackTopics]
   )
 
   const track = TRACKS.find(t => t.id === trackId)
@@ -73,6 +95,7 @@ const TrackPage: React.FC = () => {
   const trackQuestions = questions.filter(q => track.categories.includes(q.category))
   const studied = trackQuestions.filter(q => q.studied).length
   const progress = trackQuestions.length > 0 ? Math.round((studied / trackQuestions.length) * 100) : 0
+  const trackCategoriesParam = encodeURIComponent(track.categories.join(','))
 
   const getLevelStats = (levelId: string) => {
     const lq = trackQuestions.filter(q => q.level === levelId)
@@ -173,7 +196,7 @@ const TrackPage: React.FC = () => {
                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                     <Card sx={{ borderRadius: 3, overflow: 'hidden', height: '100%' }}>
                     <CardActionArea
-                      onClick={() => navigate(`/study?level=${level.id}`)}
+                      onClick={() => navigate(`/study?level=${level.id}&categories=${trackCategoriesParam}&trackName=${encodeURIComponent(track.name)}`)}
                       sx={{
                         borderRadius: 0,
                         background: `linear-gradient(135deg, ${level.color}20 0%, ${level.color}0a 100%)`,
@@ -219,11 +242,11 @@ const TrackPage: React.FC = () => {
                     </CardActionArea>
                     <Box sx={{ px: 1, pb: 1, pt: 0.5, display: 'flex', gap: 0.5, flexWrap: 'wrap', bgcolor: 'action.hover' }}>
                       <Chip size="small" label="Ошибки" sx={{ fontSize: '0.65rem', height: 22 }}
-                        onClick={() => navigate(`/study?level=${level.id}&mode=mistakes&limit=25`)} />
+                        onClick={() => navigate(`/study?level=${level.id}&categories=${trackCategoriesParam}&trackName=${encodeURIComponent(track.name)}&mode=mistakes&limit=25`)} />
                       <Chip size="small" label="Слабые" sx={{ fontSize: '0.65rem', height: 22 }}
-                        onClick={() => navigate(`/study?level=${level.id}&mode=weak&limit=25`)} />
+                        onClick={() => navigate(`/study?level=${level.id}&categories=${trackCategoriesParam}&trackName=${encodeURIComponent(track.name)}&mode=weak&limit=25`)} />
                       <Chip size="small" label="SRS" sx={{ fontSize: '0.65rem', height: 22 }}
-                        onClick={() => navigate(`/study?level=${level.id}&mode=srs&limit=25`)} />
+                        onClick={() => navigate(`/study?level=${level.id}&categories=${trackCategoriesParam}&trackName=${encodeURIComponent(track.name)}&mode=srs&limit=25`)} />
                     </Box>
                     </Card>
                   </motion.div>
@@ -239,6 +262,7 @@ const TrackPage: React.FC = () => {
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
               {topicsFiltered.map((topic, index) => {
                 const { total, studied: s } = getTopicStats(topic.categories)
+                if (topic.id === 'markup-legacy' && total === 0) return null
                 const pct = total > 0 ? Math.round((s / total) * 100) : 0
                 const url = `/study?categories=${topic.categories.join(',')}&trackName=${encodeURIComponent(topic.name)}`
                 return (

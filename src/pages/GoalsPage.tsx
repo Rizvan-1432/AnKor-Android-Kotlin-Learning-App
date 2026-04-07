@@ -246,7 +246,7 @@ const GoalsPage = () => {
                             <Chip
                               label={getGoalTypeLabel(goal.type)}
                               size="small"
-                              color={getGoalTypeColor(goal.type) as any}
+                              color={getGoalTypeColor(goal.type) as 'primary' | 'success' | 'info' | 'default'}
                               variant="outlined"
                             />
                             <Typography variant="body2" fontWeight="bold">
@@ -326,7 +326,7 @@ const GoalsPage = () => {
             id="goal-type-select"
             label="Тип цели"
             value={newGoal.type}
-            onChange={(e) => setNewGoal({ ...newGoal, type: e.target.value as any })}
+            onChange={(e) => setNewGoal({ ...newGoal, type: e.target.value as 'questions' | 'correct' | 'studied' })}
             fullWidth
             sx={{ mb: 2 }}
             SelectProps={{ native: true, inputProps: { id: 'goal-type-select', name: 'goal-type' } }}

@@ -13,7 +13,11 @@ import { Question } from '../types'
 
 const EXAMPLE_CSV = `question,answer,detailedAnswer,codeExample,level,category
 Что такое ViewModel?,ViewModel хранит UI-состояние при ротации,Подробное объяснение...,class MyVM : ViewModel() {},junior,jetpack
-Что такое Coroutine?,Корутины — лёгкие потоки Kotlin,,fun main() = runBlocking {},middle,kotlin`
+Что такое Coroutine?,Корутины — лёгкие потоки Kotlin,,fun main() = runBlocking {},middle,kotlin
+Для чего нужен semantic HTML?,Семантические теги улучшают доступность и SEO,,<main><article>...</article></main>,junior,html
+Что такое CSS specificity?,Это приоритет селекторов при конфликте стилей,,.card .title { color: red; },junior,css
+Что такое замыкание в JavaScript?,Функция помнит лексическое окружение где была создана,,function makeCounter(){ let c=0; return () => ++c },junior,javascript
+Зачем нужен React useEffect?,Для побочных эффектов после рендера,,useEffect(() => { fetchData() }, []),junior,react`
 
 const ImportPage: React.FC = () => {
   const { bulkCreate, loadQuestions } = useAdminStore()
@@ -220,6 +224,9 @@ const ImportPage: React.FC = () => {
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
               Уровни: junior | middle | senior | lead | architect | expert
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+              Frontend категории: html | css | html-css | javascript | react | typescript | state-management | build-tools | web-performance | web-security | browser-api | web-testing
             </Typography>
           </CardContent>
         </Card>

@@ -84,7 +84,6 @@ db.exec(`
   INSERT OR IGNORE INTO settings (id) VALUES (1);
 `)
 
-// Дата последнего ответа (цель дня на главной). Старые БД без колонки — миграция.
 ;(function migrateQuestionsStudiedAt() {
   try {
     const cols = db.prepare('PRAGMA table_info(questions)').all()
@@ -141,9 +140,7 @@ const rowToQuestion = r => ({
   codeExample: r.codeExample || undefined,
   level: r.level, category: r.category,
   studied: !!r.studied, correct: r.correct, incorrect: r.incorrect,
-  answered: !!r.answered,
-  studiedAt: r.studiedAt || undefined,
-  createdAt: r.createdAt,
+  answered: !!r.answered, createdAt: r.createdAt,
 })
 
 /** Офлайн-очередь может прислать частичный объект — better-sqlite3 требует все @имена */
@@ -162,15 +159,6 @@ const normalizeQuestionForUpsert = q => ({
   studiedAt: q.studiedAt != null && q.studiedAt !== '' ? String(q.studiedAt) : null,
   createdAt: q.createdAt ?? new Date().toISOString(),
 })
-
-function mergeQuestionUpdate(base, patch) {
-  const out = { ...base }
-  if (!patch || typeof patch !== 'object') return out
-  for (const [k, v] of Object.entries(patch)) {
-    if (v !== undefined) out[k] = v
-  }
-  return out
-}
 
 // ─── Auth ───────────────────────────────────────────────────────────────
 app.post('/api/admin/login', (req, res) => {
@@ -209,10 +197,20 @@ app.post('/api/questions', authMiddleware, (req, res) => {
   ok(res, rowToQuestion(db.prepare('SELECT * FROM questions WHERE id = ?').get(q.id)), 'Created')
 })
 
+/** Частичный PATCH: не затирать поля значением undefined из body (иначе category могла стать undefined → android-sdk при следующем sync). */
+function mergeQuestionUpdate(base, patch) {
+  const out = { ...base }
+  if (!patch || typeof patch !== 'object') return out
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined) out[k] = v
+  }
+  return out
+}
+
 app.put('/api/questions/:id', authMiddleware, (req, res) => {
   const row = db.prepare('SELECT * FROM questions WHERE id = ?').get(req.params.id)
   if (!row) return err(res, 'Not found', 404)
-  const upd = { ...rowToQuestion(row), ...req.body, id: req.params.id }
+  const upd = { ...mergeQuestionUpdate(rowToQuestion(row), req.body), id: req.params.id }
   db.prepare(`UPDATE questions SET question=@question,answer=@answer,detailedAnswer=@detailedAnswer,codeExample=@codeExample,level=@level,category=@category,studied=@studied,correct=@correct,incorrect=@incorrect,answered=@answered,studiedAt=@studiedAt WHERE id=@id`)
     .run({
       ...upd,
@@ -273,7 +271,8 @@ app.post('/api/questions/bulk', authMiddleware, (req, res) => {
   ok(res, { created: questions.length }, 'Bulk created')
 })
 
-// Sync: merge с существующей строкой, чтобы частичный payload не затирал текст/category.
+// Sync (офлайн / прогресс с клиента): сначала merge с строкой в БД, иначе частичный body
+// затирал текст вопроса и ставил category=android-sdk по умолчанию.
 app.post('/api/questions/sync', (req, res) => {
   const { questions: qs } = req.body
   if (!Array.isArray(qs)) return err(res, 'Invalid data')

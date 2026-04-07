@@ -39,6 +39,8 @@ const App: React.FC = () => (
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<DashboardPage />} />
+          <Route path="questions/android" element={<QuestionsPage />} />
+          <Route path="questions/frontend" element={<QuestionsPage />} />
           <Route path="questions" element={<QuestionsPage />} />
           <Route path="questions/new" element={<QuestionFormPage />} />
           <Route path="questions/:id/edit" element={<QuestionFormPage />} />

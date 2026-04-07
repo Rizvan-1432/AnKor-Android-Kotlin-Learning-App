@@ -35,6 +35,19 @@ export type QuestionCategory =
   | 'system'
   | 'behavioral'
   | 'publishing'
+  | 'html'
+  | 'css'
+  | 'html-css'
+  | 'javascript'
+  | 'typescript'
+  | 'react'
+  | 'state-management'
+  | 'build-tools'
+  | 'web-performance'
+  | 'web-security'
+  | 'browser-api'
+  /** Frontend-only: Jest/Vitest/RTL и т.п. (не путать с Android testing) */
+  | 'web-testing'
 
 export interface Stats {
   studied: number
@@ -69,8 +82,6 @@ export interface Settings {
   dailyGoal: number
   fontScale: FontScale
   highContrast: boolean
-  /** Анонимная аналитика (Plausible), только если задан VITE_PLAUSIBLE_DOMAIN */
-  analyticsConsent: boolean
 }
 
 export interface StudySession {
@@ -90,19 +101,6 @@ export interface Achievement {
   icon: string
   unlocked: boolean
   unlockedAt?: string
-}
-
-// UI типы
-export interface PaginationProps {
-  currentPage: number
-  totalPages: number
-  onPageChange: (page: number) => void
-}
-
-export interface NotificationProps {
-  message: string
-  type: 'success' | 'error' | 'warning' | 'info'
-  duration?: number
 }
 
 // Store типы
@@ -167,13 +165,3 @@ export interface ApiResponse<T> {
   error?: string
 }
 
-// Theme типы
-export interface Theme {
-  mode: 'light' | 'dark'
-  primary: string
-  secondary: string
-  background: string
-  surface: string
-  text: string
-  textSecondary: string
-}

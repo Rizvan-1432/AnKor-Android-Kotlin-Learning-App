@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { useEffect, useMemo, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import { Box } from '@mui/material'
+import { createAppTheme } from './theme/createAppTheme'
 
 // Pages
 import HomePage from './pages/HomePage'
@@ -20,6 +21,7 @@ import NotificationProvider from './components/NotificationProvider'
 
 // Hooks
 import { useAppStore } from './store'
+import { useRefreshQuestionsOnReturn } from './hooks/useRefreshQuestionsOnReturn'
 
 function useSystemDarkMode() {
   const [isDark, setIsDark] = useState(
@@ -36,6 +38,7 @@ function useSystemDarkMode() {
 
 function App() {
   const { settings } = useAppStore()
+  useRefreshQuestionsOnReturn()
   const systemDark = useSystemDarkMode()
 
   // Определяем реальный режим темы с учётом 'auto'
@@ -46,52 +49,35 @@ function App() {
   const fontSize =
     settings.fontScale === 'large' ? 17 : settings.fontScale === 'xlarge' ? 19 : 15
 
-  const theme = createTheme({
-    palette: {
-      mode: resolvedDark ? 'dark' : 'light',
-      contrastThreshold: settings.highContrast ? 4.5 : 3,
-      primary: {
-        main: resolvedDark ? '#60a5fa' : '#3b82f6',
-      },
-      secondary: {
-        main: resolvedDark ? '#9ca3af' : '#6b7280',
-      },
-      background: {
-        default: resolvedDark ? '#000000' : '#ffffff',
-        paper: resolvedDark ? '#111111' : '#ffffff',
-      },
-      text: {
-        primary: resolvedDark ? '#ffffff' : '#000000',
-        secondary: settings.highContrast
-          ? (resolvedDark ? '#e5e7eb' : '#374151')
-          : (resolvedDark ? '#d1d5db' : '#6b7280'),
-      },
-    },
-    typography: {
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize,
-    },
-  })
+  const theme = useMemo(
+    () =>
+      createAppTheme({
+        isDark: resolvedDark,
+        fontSize,
+        highContrast: settings.highContrast,
+      }),
+    [resolvedDark, fontSize, settings.highContrast]
+  )
 
   useEffect(() => {
     document.body.className = `theme-${resolvedDark ? 'dark' : 'light'}`
     
     const gradients = {
       light: {
-        blue: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #bae6fd 50%, #7dd3fc 75%, #38bdf8 100%)',
-        orange: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 25%, #fcd34d 50%, #f59e0b 75%, #d97706 100%)',
-        purple: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 25%, #c4b5fd 50%, #a78bfa 75%, #8b5cf6 100%)',
-        green: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 25%, #a7f3d0 50%, #6ee7b7 75%, #34d399 100%)',
+        blue: 'linear-gradient(168deg, #e8edf6 0%, #e2eef9 28%, #d6e1f7 55%, #c8d7f2 100%)',
+        orange: 'linear-gradient(168deg, #fff8f1 0%, #ffedd5 38%, #fed7aa 100%)',
+        purple: 'linear-gradient(168deg, #f7f5ff 0%, #ede9fe 45%, #e0e7ff 100%)',
+        green: 'linear-gradient(168deg, #f0fdf7 0%, #d1fae5 42%, #a7f3d0 100%)',
       },
       dark: {
-        blue: 'linear-gradient(135deg, #000000 0%, #0f172a 25%, #1e293b 50%, #334155 75%, #475569 100%)',
-        orange: 'linear-gradient(135deg, #000000 0%, #1c1917 25%, #292524 50%, #44403c 75%, #57534e 100%)',
-        purple: 'linear-gradient(135deg, #000000 0%, #1e1b4b 25%, #312e81 50%, #4c1d95 75%, #6b21a8 100%)',
-        green: 'linear-gradient(135deg, #000000 0%, #064e3b 25%, #065f46 50%, #047857 75%, #059669 100%)',
-        black: 'linear-gradient(135deg, #000000 0%, #111111 25%, #1a1a1a 50%, #2a2a2a 75%, #404040 100%)',
-        'dark-blue': 'linear-gradient(135deg, #000000 0%, #0c0a09 25%, #1e1b16 50%, #292524 75%, #44403c 100%)',
-        'dark-gray': 'linear-gradient(135deg, #000000 0%, #0f0f0f 25%, #1a1a1a 50%, #262626 75%, #404040 100%)',
-      }
+        blue: 'linear-gradient(168deg, #07080d 0%, #0c1018 25%, #121a2a 52%, #1a2332 100%)',
+        orange: 'linear-gradient(168deg, #0a0908 0%, #1c1917 35%, #292524 70%, #3f3a36 100%)',
+        purple: 'linear-gradient(168deg, #08070c 0%, #15122a 38%, #1b1740 72%, #252047 100%)',
+        green: 'linear-gradient(168deg, #050a08 0%, #0f2922 35%, #134e3f 70%, #166534 100%)',
+        black: 'linear-gradient(168deg, #08070a 0%, #12141a 40%, #1a1d26 100%)',
+        'dark-blue': 'linear-gradient(168deg, #07080c 0%, #0f1419 45%, #161a22 100%)',
+        'dark-gray': 'linear-gradient(168deg, #09090b 0%, #141416 45%, #1f1f1f 100%)',
+      },
     }
     
     const themeKey = resolvedDark ? 'dark' : 'light'
@@ -116,30 +102,13 @@ function App() {
     document.body.style.padding = '0'
     
     if (resolvedDark) {
-      document.body.style.color = '#ffffff'
+      document.body.style.color = '#f4f4f5'
       document.body.style.colorScheme = 'dark'
     } else {
-      document.body.style.color = '#000000'
+      document.body.style.color = '#0f172a'
       document.body.style.colorScheme = 'light'
     }
   }, [resolvedDark, settings.backgroundGradient])
-
-  // Опциональная анонимная аналитика (Plausible), только при согласии и VITE_PLAUSIBLE_DOMAIN
-  useEffect(() => {
-    const domain = import.meta.env.VITE_PLAUSIBLE_DOMAIN as string | undefined
-    const existing = document.getElementById('plausible-script')
-    if (!settings.analyticsConsent || !domain) {
-      if (existing) existing.remove()
-      return
-    }
-    if (existing) return
-    const s = document.createElement('script')
-    s.id = 'plausible-script'
-    s.defer = true
-    s.setAttribute('data-domain', domain)
-    s.src = 'https://plausible.io/js/script.js'
-    document.head.appendChild(s)
-  }, [settings.analyticsConsent])
 
   return (
     <ThemeProvider theme={theme}>
@@ -150,7 +119,7 @@ function App() {
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
-            pb: { xs: 7, sm: 0 }, // Отступ для мобильной навигации
+            pb: { xs: 8, sm: 0 }, // Нижняя панель выше из‑за крупных подписей
             background: 'transparent',
             position: 'relative'
           }}>
@@ -162,6 +131,7 @@ function App() {
                 <Route path="/answer" element={<AnswerPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/goals" element={<GoalsPage />} />
+                <Route path="/lists" element={<Navigate to="/goals" replace />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/track/:trackId" element={<TrackPage />} />
               </Routes>

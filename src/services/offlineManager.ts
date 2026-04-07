@@ -150,8 +150,6 @@ class OfflineManager {
 
       // Очищаем синхронизированные действия
       this.clearActions()
-      
-      console.log('✅ Офлайн данные синхронизированы')
     } catch (error) {
       console.warn('❌ Ошибка синхронизации:', error)
     }

@@ -34,6 +34,6 @@
       "@assets/*": ["./src/assets/*"]
     }
   },
-  "include": ["src", "src/vite-env.d.ts", "src/types/vite.d.ts"],
+  "include": ["src", "src/vite-env.d.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

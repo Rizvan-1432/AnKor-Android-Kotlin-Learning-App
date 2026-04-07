@@ -22,9 +22,23 @@ export const TRACKS = [
     name: 'Frontend разработка',
     icon: '🌐',
     color: '#f59e0b',
-    description: 'React, Vue, TypeScript, CSS, браузерные API',
-    available: false,
-    categories: [] as QuestionCategory[],
+    description: 'Теперь доступно: HTML, CSS, JavaScript, React, TypeScript и браузерные API',
+    available: true,
+    // Только категории без пересечения с Android (иначе вопросы «дублируются» между треками).
+    categories: [
+      'html',
+      'css',
+      'html-css',
+      'javascript',
+      'typescript',
+      'react',
+      'state-management',
+      'build-tools',
+      'web-performance',
+      'web-security',
+      'browser-api',
+      'web-testing',
+    ] as QuestionCategory[],
   },
   {
     id: 'backend',
@@ -163,6 +177,13 @@ const QuestionsPage: React.FC = () => {
                     >
                       {track.name}
                     </Typography>
+                    {track.id === 'frontend' && (
+                      <Chip
+                        label="Новое"
+                        size="small"
+                        sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#fff7ed', color: '#ea580c', fontWeight: 'bold' }}
+                      />
+                    )}
                     {!track.available && (
                       <Chip label="Скоро" size="small"
                         sx={{ height: 18, fontSize: '0.6rem', bgcolor: '#f3f4f6', color: '#6b7280' }} />
